@@ -1,7 +1,6 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Text;
+﻿using System.Text;
 
-namespace SAS5CodeDisasembler
+namespace SecTool
 {
     struct CodeOffset
     {
@@ -12,7 +11,7 @@ namespace SAS5CodeDisasembler
     struct EditableString
     {
         public bool IsEdited;
-        public string Text;
+        public string Text ;
 
         public EditableString(string text, bool isEdited = true)
         {

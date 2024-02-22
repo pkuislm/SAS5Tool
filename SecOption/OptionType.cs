@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.PortableExecutable;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SAS5CodeDisasembler.SecOption
+﻿namespace SecTool.SecOption
 {
     abstract class OptionType
     {
@@ -36,7 +29,7 @@ namespace SAS5CodeDisasembler.SecOption
                 case 6:
                     return new SecOptionBinary(reader);
                 default:
-                    throw new Exception("Unknown Option TypeID");
+                    throw new Exception("Unknown OptionTypeID");
             }
         }
 
@@ -59,6 +52,11 @@ namespace SAS5CodeDisasembler.SecOption
     class SecOptionMap : OptionType
     {
         public Dictionary<string, OptionType> Map;
+
+        public SecOptionMap() : base(0)
+        {
+            Map = [];
+        }
 
         public SecOptionMap(BinaryReader reader) : base(0)
         {
@@ -85,6 +83,11 @@ namespace SAS5CodeDisasembler.SecOption
     class SecOptionTuple : OptionType
     {
         public List<OptionType> Members;
+
+        public SecOptionTuple() : base(1)
+        {
+            Members = [];
+        }
 
         public SecOptionTuple(BinaryReader reader) : base(1)
         {
@@ -116,6 +119,11 @@ namespace SAS5CodeDisasembler.SecOption
     {
         public int Value;
 
+        public SecOptionInteger() : base(2)
+        {
+            Value = 0;
+        }
+
         public SecOptionInteger(BinaryReader reader) : base(2)
         {
             Value = reader.ReadInt32();
@@ -136,6 +144,10 @@ namespace SAS5CodeDisasembler.SecOption
     class SecOptionString : OptionType
     {
         public EditableString Value;
+
+        public SecOptionString() : base(3)
+        {
+        }
 
         public SecOptionString(BinaryReader reader) : base(3)
         {
@@ -158,6 +170,12 @@ namespace SAS5CodeDisasembler.SecOption
     class SecOptionResource : OptionType
     {
         public int Value;
+
+        public SecOptionResource() : base(4)
+        {
+
+        }
+
         public SecOptionResource(BinaryReader reader) : base(4)
         {
             Value = reader.ReadInt32();
@@ -179,6 +197,12 @@ namespace SAS5CodeDisasembler.SecOption
     class SecOptionLabel : OptionType
     {
         public int Value;
+
+        public SecOptionLabel() : base(5)
+        {
+
+        }
+
         public SecOptionLabel(BinaryReader reader) : base(5)
         {
             Value = reader.ReadInt32();
@@ -200,6 +224,12 @@ namespace SAS5CodeDisasembler.SecOption
     class SecOptionBinary : OptionType
     {
         public byte[] Value;
+
+        public SecOptionBinary() : base(6)
+        {
+            Value = [];
+        }
+
         public SecOptionBinary(BinaryReader reader) : base(6)
         {
             Value = reader.ReadBytes(reader.ReadInt32());

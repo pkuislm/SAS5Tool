@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 
-namespace SAS5CodeDisasembler
+namespace SecTool
 {
     class SecSource
     {
-        class SecSourceLine
+        public class SecSourceLine
         {
             public int v1;
             public int v2;
@@ -55,7 +49,7 @@ namespace SAS5CodeDisasembler
             }
         }
 
-        class SecSourceFile
+        public class SecSourceFile
         {
             public string Name;
             public int Position;
@@ -74,11 +68,11 @@ namespace SAS5CodeDisasembler
             }
         }
 
-        List<SecSourceFile> _sourceFiles;
+        public List<SecSourceFile> SourceFiles;
 
         public SecSource(byte[]? input)
         {
-            _sourceFiles = [];
+            SourceFiles = [];
 
             if(input == null)
             {
@@ -90,12 +84,12 @@ namespace SAS5CodeDisasembler
 
             for(int i = 0; i < count; i++)
             {
-                _sourceFiles.Add(new SecSourceFile(reader));
+                SourceFiles.Add(new SecSourceFile(reader));
             }
 
             Trace.Assert(reader.ReadInt32() == 0x54505A43);//CZPT
 
-            foreach(var source in _sourceFiles)
+            foreach(var source in SourceFiles)
             {
                 var lines = reader.ReadInt32();
                 for(var i = 0; i < lines; ++i)

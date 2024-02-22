@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SAS5CodeDisasembler
+﻿namespace SecTool
 {
     class SecCodePage
     {
@@ -31,7 +25,7 @@ namespace SAS5CodeDisasembler
             FileReadingCodePage = ExecutorCodePage = ExpressionCodePage = charset;
         }
 
-        public byte[] GetCharSetData()
+        public byte[] GetData()
         {
             var ms = new MemoryStream();
             using var writer = new BinaryWriter(ms);

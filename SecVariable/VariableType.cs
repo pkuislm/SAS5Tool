@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SAS5CodeDisasembler.SecVariable
+﻿namespace SecTool.SecVariable
 {
     abstract class BasicType
     {
@@ -75,7 +69,7 @@ namespace SAS5CodeDisasembler.SecVariable
 
     class TupleType : BasicType
     {
-        //TODO: Analyze this type
+        //TODO: Analyze this type(probably same as record type)
         public TupleType() : base(2)
         {
         }

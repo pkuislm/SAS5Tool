@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace SAS5CodeDisasembler.SecCode
+﻿namespace SecTool.SecCode
 {
     class ExecutorCommand
     {
@@ -358,6 +356,18 @@ namespace SAS5CodeDisasembler.SecCode
                 default: return false;
 
             }
+        }
+
+        public ExecutorCommand(byte type, short index, List<Expression>? expression = null, long offset = -1)
+        {
+            Offset.Old = offset;
+            Type = type;
+            ExecutorIndex = index;
+            Expression = expression;
+        }
+
+        public ExecutorCommand()
+        {
         }
 
         public void GetExpression(BinaryReader reader)

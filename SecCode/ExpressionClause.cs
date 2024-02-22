@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection.PortableExecutable;
-using System.Text;
-using System.Threading.Tasks;
-using SAS5CodeDisasembler.SecVariable;
+﻿using System.Diagnostics;
+using SecTool.SecVariable;
 
-namespace SAS5CodeDisasembler.SecCode
+namespace SecTool.SecCode
 {
     class NativeFunCall
     {
@@ -38,6 +32,14 @@ namespace SAS5CodeDisasembler.SecCode
             None = 0,
             Direct,
             Offset
+        }
+
+        public ExpressionClause(byte op, object? data)
+        {
+            Offset.Old = -1;
+            DataOffset.Old = -1;
+            Op = op;
+            Data = data;
         }
 
         public ExpressionClause(BinaryReader reader, long basePos = 0)

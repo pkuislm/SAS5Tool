@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SAS5CodeDisasembler.SecCode
+﻿namespace SecTool.SecCode
 {
     class Expression
     {
@@ -12,6 +6,13 @@ namespace SAS5CodeDisasembler.SecCode
         public byte ReturnType;
         public List<ExpressionClause> Clauses;
 
+        public Expression(short exprLength, byte exprReturnType, List<ExpressionClause> clauses)
+        {
+            Length = exprLength;
+            ReturnType = exprReturnType;
+            Clauses = clauses;
+        }
+        
         public Expression(short exprLength, byte exprReturnType, long basePos, byte[]? exprData = null)
         {
             Clauses = [];

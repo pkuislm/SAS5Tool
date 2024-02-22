@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SAS5CodeDisasembler.SecVariable
+﻿namespace SecTool.SecVariable
 {
     class VariableManager : Singleton<VariableManager>
     {

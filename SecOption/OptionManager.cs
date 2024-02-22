@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Newtonsoft.Json;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace SAS5CodeDisasembler.SecOption
+namespace SecTool.SecOption
 {
     class OptionManager
     {
@@ -23,7 +19,7 @@ namespace SAS5CodeDisasembler.SecOption
             _secOptionMap = new SecOptionMap(reader);
         }
 
-        public byte[] Save()
+        public byte[] GetData()
         {
             if(_secOptionMap == null)
             {
@@ -33,6 +29,16 @@ namespace SAS5CodeDisasembler.SecOption
             using var writer = new BinaryWriter(ms);
             _secOptionMap.Save(writer);
             return ms.ToArray();
+        }
+
+        public void Save(string path)
+        {
+            File.WriteAllText(path, JsonConvert.SerializeObject(_secOptionMap, Formatting.Indented , new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.Objects }));
+        }
+
+        public void Load(string path)
+        {
+            _secOptionMap = JsonConvert.DeserializeObject<SecOptionMap>(File.ReadAllText(path), new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.Objects });
         }
 
         public void UpdateExportFuncAddr(Dictionary<long, long> addresses)
@@ -53,11 +59,10 @@ namespace SAS5CodeDisasembler.SecOption
                     }
                     else
                     {
-                        throw new Exception("Unknown jmp addr.");
+                        throw new Exception("Unknown export function addr.");
                     }
                 }
             }
         }
-
     }
 }
