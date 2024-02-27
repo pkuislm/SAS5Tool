@@ -31,18 +31,19 @@ namespace SecTool
             var option = new OptionManager(prog.GetSectionData("OPTN"));
             code.Disasemble();
             
+            SecTextTool.ExtractionSetTextFormatFlagVal();
             switch(args[0])
             {
                 case "export":
-                    var text = code.GetText();
-                    ScenarioCode.ExportText(args[2], text);
+                    var text = SecTextTool.GetText(code.Code);
+                    SecTextTool.ExportText(args[2], text);
                     option.Save(Path.Combine(args[2], "options.json"));
                     break;
 
                 case "import":
-                    var txt = ScenarioCode.ImportText(args[2]);
+                    var txt = SecTextTool.ImportText(args[2]);
                     option.Load(Path.Combine(args[2], "options.json"));
-                    code.SetText(txt);
+                    SecTextTool.SetText(txt, code.Code);
 
                     var secData = code.Assemble();
 
