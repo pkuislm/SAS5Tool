@@ -17,12 +17,12 @@ namespace SecTool
             {
                 Console.WriteLine("SAS5Tool.Sectool");
                 Console.WriteLine("A tool to extract & import messages/strings inside .sec5 file.\n");
-                Console.WriteLine("Usage:\nSecTool.exe export <sec5 file path> <output folder>\nSecTool.exe import <sec5 file path> <intput folder> [<sec5 file save path>]\n\n");
+                Console.WriteLine("Usage:\nSecTool.exe export <game> <sec5 file path> <output folder>\nSecTool.exe import <game> <sec5 file path> <intput folder> [<sec5 file save path>]\n\n");
                 Console.WriteLine("Modes:\n\textract\t\tExtracting all texts inside the sec5 specified and output mutiple .txt files to the folder.\n\timport\t\tImport all .txt files inside the folder and output a new sec5 file.");
                 return;
             }
 
-            SecScenarioProgram prog = new(args[1]);
+            SecScenarioProgram prog = new(args[2]);
             VariableManager.Instance.LoadVariablesList(prog.GetSectionData("DTDE"));
 
             var charset = new SecCodePage(CodepageManager.Instance.ExportCodePage);
@@ -30,19 +30,19 @@ namespace SecTool
             var code = new ScenarioCode(prog.GetSectionData("CODE"), source);
             var option = new OptionManager(prog.GetSectionData("OPTN"));
             code.Disasemble();
-            
-            SecTextTool.ExtractionSetTextFormatFlagVal();
+
+            SecTextTool.ExtractionSetTextFormatFlagVal(args[1].Equals("natsukoi", StringComparison.CurrentCultureIgnoreCase) ? 0 : 1);
             switch(args[0])
             {
                 case "export":
                     var text = SecTextTool.GetText(code.Code);
-                    SecTextTool.ExportText(args[2], text);
-                    option.Save(Path.Combine(args[2], "options.json"));
+                    SecTextTool.ExportText(args[3], text);
+                    option.Save(Path.Combine(args[3], "options.json"));
                     break;
 
                 case "import":
-                    var txt = SecTextTool.ImportText(args[2]);
-                    option.Load(Path.Combine(args[2], "options.json"));
+                    var txt = SecTextTool.ImportText(args[3]);
+                    option.Load(Path.Combine(args[3], "options.json"));
                     SecTextTool.SetText(txt, code.Code);
 
                     var secData = code.Assemble();
@@ -52,7 +52,7 @@ namespace SecTool
                     prog.SetSectionData("CODE", secData.Item1);
                     prog.SetSectionData("CHAR", charset.GetData());
                     prog.SetSectionData("OPTN", option.GetData());
-                    prog.Save(args.Length < 4 ? args[1] + ".new" : args[3]);
+                    prog.Save(args.Length < 5 ? args[2] + ".new" : args[4]);
                     break;
             }
         }

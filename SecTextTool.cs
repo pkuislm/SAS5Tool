@@ -423,7 +423,7 @@ namespace SecTool
                 {
                     output.WriteLine($"☆{idx:X8}☆{dialogue.Character}☆{dialogue.Text}");
                     //output.WriteLine($"★{idx:X8}★{dialogue.Character}★{dialogue.Text}\n");
-                    if(false && dialogue.Text != "")
+                    if(/*false && */dialogue.Text != "")
                     {
                         output.WriteLine($"★{idx:X8}★{dialogue.Character}★{(dialogue.Text[0] == '「' ? "「」" : dialogue.Text[0] == '『' ? "『』" : "")}\n");
                     }
