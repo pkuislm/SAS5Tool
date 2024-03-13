@@ -1,6 +1,6 @@
-﻿namespace SecTool.SecCode
+﻿namespace SAS5Lib.SecCode
 {
-    class ExecutorCommand
+    public class ExecutorCommand
     {
         public CodeOffset Offset;
         public byte Type;

@@ -1,6 +1,6 @@
-﻿namespace SecTool.SecCode
+﻿namespace SAS5Lib.SecCode
 {
-    class OrphanExpression
+    public class OrphanExpression
     {
         public CodeOffset Offset;
         public List<ExpressionClause> Clauses;

@@ -1,9 +1,9 @@
 ﻿using Newtonsoft.Json;
 using System.Diagnostics;
 
-namespace SecTool.SecOption
+namespace SAS5Lib.SecOption
 {
-    class OptionManager
+    public class OptionManager
     {
         SecOptionMap? _secOptionMap;
 

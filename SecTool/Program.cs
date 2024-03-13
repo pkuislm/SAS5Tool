@@ -1,7 +1,7 @@
-﻿using System.Text;
-using SecTool.SecVariable;
-using SecTool.SecCode;
-using SecTool.SecOption;
+﻿using SAS5Lib.SecCode;
+using SAS5Lib.SecOption;
+using SAS5Lib.SecVariable;
+using System.Text;
 
 namespace SecTool
 {
@@ -23,6 +23,7 @@ namespace SecTool
             }
 
             SecScenarioProgram prog = new(args[2]);
+
             VariableManager.Instance.LoadVariablesList(prog.GetSectionData("DTDE"));
 
             var charset = new SecCodePage(CodepageManager.Instance.ExportCodePage);

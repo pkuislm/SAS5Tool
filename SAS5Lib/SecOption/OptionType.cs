@@ -1,6 +1,6 @@
-﻿namespace SecTool.SecOption
+﻿namespace SAS5Lib.SecOption
 {
-    abstract class OptionType
+    public abstract class OptionType
     {
         protected byte TypeID;
 
@@ -49,7 +49,7 @@
         public abstract void Save(BinaryWriter writer);
     }
 
-    class SecOptionMap : OptionType
+    public class SecOptionMap : OptionType
     {
         public Dictionary<string, OptionType> Map;
 
@@ -80,7 +80,7 @@
         }
     }
 
-    class SecOptionTuple : OptionType
+    public class SecOptionTuple : OptionType
     {
         public List<OptionType> Members;
 
@@ -115,7 +115,7 @@
         }
     }
 
-    class SecOptionInteger : OptionType
+    public class SecOptionInteger : OptionType
     {
         public int Value;
 
@@ -141,7 +141,7 @@
         }
     }
 
-    class SecOptionString : OptionType
+    public class SecOptionString : OptionType
     {
         public EditableString Value;
 
@@ -167,7 +167,7 @@
         }
     }
 
-    class SecOptionResource : OptionType
+    public class SecOptionResource : OptionType
     {
         public int Value;
 
@@ -194,7 +194,7 @@
         }
     }
 
-    class SecOptionLabel : OptionType
+    public class SecOptionLabel : OptionType
     {
         public int Value;
 
@@ -221,7 +221,7 @@
         }
     }
 
-    class SecOptionBinary : OptionType
+    public class SecOptionBinary : OptionType
     {
         public byte[] Value;
 

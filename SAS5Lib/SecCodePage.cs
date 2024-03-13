@@ -1,6 +1,6 @@
-﻿namespace SecTool
+﻿namespace SAS5Lib
 {
-    class SecCodePage
+    public class SecCodePage
     {
         public int FileReadingCodePage;
         public int ExecutorCodePage;

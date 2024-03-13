@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
-using SecTool.SecVariable;
+using SAS5Lib.SecVariable;
 
-namespace SecTool.SecCode
+namespace SAS5Lib.SecCode
 {
-    class NativeFunCall
+    public class NativeFunCall
     {
         public byte PresetObjIndex;
         public int NativeFuncIndex;
@@ -20,7 +20,7 @@ namespace SecTool.SecCode
         }
     }
 
-    class ExpressionClause
+    public class ExpressionClause
     {
         public CodeOffset DataOffset;
         public CodeOffset Offset;

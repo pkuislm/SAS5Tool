@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 
-namespace SecTool.SecCode
+namespace SAS5Lib.SecCode
 {
-    class NamedCode
+    public class NamedCode
     {
         public string Name;
         public List<object> Code;
@@ -19,7 +19,7 @@ namespace SecTool.SecCode
         }
     }
 
-    class ScenarioCode
+    public class ScenarioCode
     {
         readonly BinaryReader _reader;
         readonly SecSource? _source;

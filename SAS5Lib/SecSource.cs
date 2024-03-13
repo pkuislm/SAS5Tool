@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 
-namespace SecTool
+namespace SAS5Lib
 {
-    class SecSource
+    public class SecSource
     {
         public class SecSourceLine
         {

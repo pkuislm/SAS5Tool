@@ -1,6 +1,6 @@
-﻿namespace SecTool.SecVariable
+﻿namespace SAS5Lib.SecVariable
 {
-    abstract class BasicType
+    public abstract class BasicType
     {
         protected byte BasicTypeID;
         protected int Size;
@@ -12,7 +12,7 @@
         public virtual int GetSize() { return Size; }
     }
 
-    class PrimitiveType : BasicType
+    public class PrimitiveType : BasicType
     {
         public byte PrimitiveTypeID;
         public PrimitiveType(byte primitiveTypeID) : base(0)
@@ -49,7 +49,7 @@
         }
     }
 
-    class ArrayType : BasicType
+    public class ArrayType : BasicType
     {
         public int ElementCount;
         public BasicType ElementType;
@@ -67,7 +67,7 @@
         }
     }
 
-    class TupleType : BasicType
+    public class TupleType : BasicType
     {
         //TODO: Analyze this type(probably same as record type)
         public TupleType() : base(2)
@@ -75,7 +75,7 @@
         }
     }
 
-    class RecordType : BasicType
+    public class RecordType : BasicType
     {
         public int MemberCount;
         public List<VariableType> Members;
@@ -96,7 +96,7 @@
         }
     }
 
-    class VariableType
+    public class VariableType
     {
         public string Name;
         public BasicType Type;
@@ -113,7 +113,7 @@
         }
     }
 
-    class Variable
+    public class Variable
     {
         public int Index;
         public VariableType Type;

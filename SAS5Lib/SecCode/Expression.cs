@@ -1,6 +1,6 @@
-﻿namespace SecTool.SecCode
+﻿namespace SAS5Lib.SecCode
 {
-    class Expression
+    public class Expression
     {
         public short Length;
         public byte ReturnType;

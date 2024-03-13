@@ -1,6 +1,6 @@
-﻿namespace SecTool.SecVariable
+﻿namespace SAS5Lib.SecVariable
 {
-    class VariableManager : Singleton<VariableManager>
+    public class VariableManager : Singleton<VariableManager>
     {
         readonly List<VariableType> VariableTypes = [];
 

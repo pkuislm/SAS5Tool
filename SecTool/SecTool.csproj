@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PublishSingleFile>true</PublishSingleFile>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <BaseOutputPath>$(SolutionDir)Build\bin</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(SolutionDir)Build\obj\SecTool\</BaseIntermediateOutputPath>
+    <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SAS5Lib\SAS5Lib.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="SAS5Lib" />
+  </ItemGroup>
+
+</Project>

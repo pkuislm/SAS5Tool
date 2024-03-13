@@ -1,9 +1,18 @@
-﻿using System.Diagnostics;
-using SecTool.SecCode;
+﻿using System.CodeDom.Compiler;
+using System.Diagnostics;
+using System.Text.RegularExpressions;
+using SAS5Lib.SecCode;
 
 namespace SecTool
 {
     using Script = List<Tuple<string, List<SecTextTool.Dialogue>>>;
+
+    partial class SecRegex
+    {
+        [GeneratedRegex(@"(\{(.+?):(.+?)\})")]
+        public static partial Regex RubyPattern();
+    }
+
     public class SecTextTool
     {
         static int FLG_NAME;
@@ -148,7 +157,7 @@ namespace SecTool
             }
             return text;
         }
-
+        
         public static void SetText(Script text, List<object> secCode)
         {
             var TYPE_DIALOGUE = 1 << 0;
@@ -173,9 +182,56 @@ namespace SecTool
                     var text = dialogue.Text;
                     foreach(var line in text.Split("\\n"))
                     {
-                        //TODO: Regex to ruby text
+                        if(SecRegex.RubyPattern().IsMatch(line))
+                        {
+                            ExecutorCommand cmd = new(0x1B, 0x1F9)
+                            {
+                                Expression = []
+                            };
 
-                        ret.Add(new EditableString(line, true));
+                            var group = SecRegex.RubyPattern().Matches(line);
+                            var lastMatchEnd = 0;
+                            for (int i = 0; i < group.Count; ++i)
+                            {
+                                if (lastMatchEnd != group[i].Index)
+                                {
+                                    if(cmd.Expression.Count > 0)
+                                    {
+                                        ret.Add(cmd);
+                                        cmd = new(0x1B, 0x1F9)
+                                        {
+                                            Expression = []
+                                        };
+                                    }
+                                    ret.Add(new EditableString(line[lastMatchEnd..group[i].Index], true));
+                                }
+
+                                var g = group[i].Groups;
+                                var expr = new List<Expression>
+                                    {
+                                        new(0, 1, [
+                                            new ExpressionClause(0x7A, new EditableString(line.Substring(g[2].Index, g[2].Length), true)),
+                                            new ExpressionClause(0xFF, null)
+                                        ]),
+                                        new(0, 2, [
+                                            new ExpressionClause(0x7A, new EditableString(line.Substring(g[3].Index, g[3].Length), true)),
+                                            new ExpressionClause(0xFF, null)
+                                        ])
+                                    };
+                                cmd.Expression.AddRange(expr);
+
+                                lastMatchEnd = group[i].Index + group[i].Length;
+                            }
+                            ret.Add(cmd);
+                            if (lastMatchEnd != line.Length)
+                            {
+                                ret.Add(new EditableString(line[lastMatchEnd..], true));
+                            }
+                        }
+                        else
+                        {
+                            ret.Add(new EditableString(line, true));
+                        }
                         ret.Add(new ExecutorCommand(0x1B, 0x1F8));//Line break;
                     }
                     ret.RemoveAt(ret.Count-1);
@@ -423,7 +479,7 @@ namespace SecTool
                 {
                     output.WriteLine($"☆{idx:X8}☆{dialogue.Character}☆{dialogue.Text}");
                     //output.WriteLine($"★{idx:X8}★{dialogue.Character}★{dialogue.Text}\n");
-                    if(/*false && */dialogue.Text != "")
+                    if(false && dialogue.Text != "")
                     {
                         output.WriteLine($"★{idx:X8}★{dialogue.Character}★{(dialogue.Text[0] == '「' ? "「」" : dialogue.Text[0] == '『' ? "『』" : "")}\n");
                     }
