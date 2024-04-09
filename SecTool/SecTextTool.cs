@@ -22,7 +22,7 @@ namespace SecTool
         {
         }
 
-        public static void ExtractionSetTextFormatFlagVal(string gameType, int optionValue)
+        public static void ExtractionSetTextFormatFlagVal(string gameType)
         {
             switch (gameType.ToLower())
             {

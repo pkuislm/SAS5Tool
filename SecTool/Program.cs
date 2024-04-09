@@ -36,7 +36,7 @@ namespace SecTool
             var option = new OptionManager(prog.GetSectionData("OPTN"));
             code.Disasemble();
 
-            SecTextTool.ExtractionSetTextFormatFlagVal(args[1], args[1].Equals("natsukoi", StringComparison.CurrentCultureIgnoreCase) ? 0 : 1);
+            SecTextTool.ExtractionSetTextFormatFlagVal(args[1]);
             switch(args[0])
             {
                 case "export":

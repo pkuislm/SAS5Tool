@@ -230,5 +230,21 @@ namespace SAS5Lib.SecResource
 
             return ms.ToArray();
         }
+
+        public Dictionary<int, string> GetFileList(string arcName)
+        {
+            arcName = Path.GetFileName(arcName);
+            var records = Resources.Where(record => record.Properties.ContainsKey("arc-index") && record.Properties.ContainsKey("path") && record.Properties["path"].ToString().Contains(arcName));
+            Dictionary<int, string> ret = [];
+            foreach (var rec in records)
+            {
+                if(rec.Properties["arc-index"] is int index)
+                {
+                    ret.TryAdd(index, rec.Name);
+                }
+            }
+            return ret;
+        }
+
     }
 }

@@ -1,5 +1,6 @@
 ﻿using SAS5Lib.SecResource;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ArcTool
 {
@@ -10,12 +11,6 @@ namespace ArcTool
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             CodepageManager.Instance.SetImportEncoding("sjis");
             CodepageManager.Instance.SetExportEncoding("utf8");
-
-
-            {
-                var iarArc = new IarArchive(@"E:\GalGames_Work\OnWork\夏彩恋歌\natsukoi_main_ui.iar_old");
-                Console.WriteLine("SAS5Tool.ArcTool");
-            }
 
 
             if(args.Length <  4)
@@ -31,16 +26,17 @@ namespace ArcTool
             var resource = new ResourceManager(prog.GetSectionData("RES2"));
             var archives = new SecArcFileList(prog.GetSectionData("RTFC"));
 
-
             if (args[1] == "unpack")
             {
                 switch (args[0])
                 {
                     case "gar":
-                        var arc = new GarArchive(args[3]);
-                        arc.ExtractTo(args.Length > 4 ? args[4] : args[3] + "_unpack");
+                        var garArc = new GarArchive(args[3]);
+                        garArc.ExtractTo(args.Length > 4 ? args[4] : args[3] + "_unpack");
                         break;
                     case "iar":
+                        var iarArc = new IarArchive(args[3]);
+                        iarArc.ExtractTo(resource.GetFileList(args[3]), args.Length > 4 ? args[4] : args[3] + "_unpack");
                         break;
                 }
             }
@@ -66,8 +62,6 @@ namespace ArcTool
             {
                 Console.WriteLine($"Unknown operation: {args[1]}");
             }
-            
-            Console.WriteLine("Hello, World!");
         }
     }
 }
