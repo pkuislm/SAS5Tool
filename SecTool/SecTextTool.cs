@@ -22,21 +22,27 @@ namespace SecTool
         {
         }
 
-        public static void ExtractionSetTextFormatFlagVal(int gameType = 0)
+        public static void ExtractionSetTextFormatFlagVal(string gameType, int optionValue)
         {
-            if(gameType != 0)
+            switch (gameType.ToLower())
             {
-                //Nankoi
-                FLG_NAME = 0x6B;
-                FLG_TITLE = 0x82;
-                FLG_SELECT = 0x8D;
-            }
-            else
-            {
-                //Natsukoi
-                FLG_NAME = 0x53;
-                FLG_TITLE = 0x67;
-                FLG_SELECT = 0x72;
+                case "nankoi":
+                    FLG_NAME = 0x6B;
+                    FLG_TITLE = 0x82;
+                    FLG_SELECT = 0x8D;
+                    break;
+
+                case "natsukoi":
+                    FLG_NAME = 0x53;
+                    FLG_TITLE = 0x67;
+                    FLG_SELECT = 0x72;
+                    break;
+
+                case "hanikami":
+                    FLG_NAME = 0x54;
+                    FLG_TITLE = 0x68;
+                    FLG_SELECT = 0x73;
+                    break;
             }
         }
 

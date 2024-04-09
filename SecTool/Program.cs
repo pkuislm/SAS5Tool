@@ -19,6 +19,10 @@ namespace SecTool
                 Console.WriteLine("A tool to extract & import messages/strings inside .sec5 file.\n");
                 Console.WriteLine("Usage:\nSecTool.exe export <game> <sec5 file path> <output folder>\nSecTool.exe import <game> <sec5 file path> <intput folder> [<sec5 file save path>]\n\n");
                 Console.WriteLine("Modes:\n\textract\t\tExtracting all texts inside the sec5 specified and output mutiple .txt files to the folder.\n\timport\t\tImport all .txt files inside the folder and output a new sec5 file.");
+                Console.WriteLine("Supported games:");
+                Console.WriteLine("Minamijuujisei Renka (nankoi)");
+                Console.WriteLine("Natsuiro Koi Uta (natsukoi)");
+                Console.WriteLine("Hanikami Clover (hanikami)");
                 return;
             }
 
@@ -32,7 +36,7 @@ namespace SecTool
             var option = new OptionManager(prog.GetSectionData("OPTN"));
             code.Disasemble();
 
-            SecTextTool.ExtractionSetTextFormatFlagVal(args[1].Equals("natsukoi", StringComparison.CurrentCultureIgnoreCase) ? 0 : 1);
+            SecTextTool.ExtractionSetTextFormatFlagVal(args[1], args[1].Equals("natsukoi", StringComparison.CurrentCultureIgnoreCase) ? 0 : 1);
             switch(args[0])
             {
                 case "export":
