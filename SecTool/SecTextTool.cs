@@ -43,6 +43,12 @@ namespace SecTool
                     FLG_TITLE = 0x68;
                     FLG_SELECT = 0x73;
                     break;
+
+                case "iwaou":
+                    FLG_NAME = 0x4F;
+                    FLG_TITLE = 0x64;
+                    FLG_SELECT = 0x70;
+                    break;
             }
         }
 
