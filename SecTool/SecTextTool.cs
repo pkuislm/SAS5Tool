@@ -1,6 +1,7 @@
 ﻿using System.CodeDom.Compiler;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
 using SAS5Lib.SecCode;
 
 namespace SecTool
@@ -22,33 +23,16 @@ namespace SecTool
         {
         }
 
-        public static void ExtractionSetTextFormatFlagVal(string gameType)
+        public static void SetTextFlag(string gameType)
         {
-            switch (gameType.ToLower())
+            var f = SecTextConfig.Instance.GetGameFlag(gameType.ToLower());
+
+            if(f != null)
             {
-                case "nankoi":
-                    FLG_NAME = 0x6B;
-                    FLG_TITLE = 0x82;
-                    FLG_SELECT = 0x8D;
-                    break;
-
-                case "natsukoi":
-                    FLG_NAME = 0x53;
-                    FLG_TITLE = 0x67;
-                    FLG_SELECT = 0x72;
-                    break;
-
-                case "hanikami":
-                    FLG_NAME = 0x54;
-                    FLG_TITLE = 0x68;
-                    FLG_SELECT = 0x73;
-                    break;
-
-                case "iwaou":
-                    FLG_NAME = 0x4F;
-                    FLG_TITLE = 0x64;
-                    FLG_SELECT = 0x70;
-                    break;
+                var flag = f.Value;
+                FLG_NAME = flag.NameFlag;
+                FLG_TITLE = flag.TitleFlag;
+                FLG_SELECT = flag.SelectFlag;
             }
         }
 
@@ -422,38 +406,50 @@ namespace SecTool
                 {
                     continue;
                 }
+
                 if(!dict.TryGetValue(Path.GetFileName(nc.Name), out var dialogues))
                 {
                     continue;
                 }
+
                 current = nc;
                 Console.WriteLine($"Importing {nc.Name}...");
-                var nnc = new NamedCode(nc.Name, []);
-                int prevPos = 0;
-                foreach(var t in GetTextBlockProp())
+
+                try
                 {
-                    if(dialogues.Count == 0)
+                    var nnc = new NamedCode(nc.Name, []);
+                    int prevPos = 0;
+                    foreach (var t in GetTextBlockProp())
                     {
-                        throw new Exception("Dialogue count doesn't match");
+                        if (dialogues.Count == 0)
+                        {
+                            throw new Exception("Dialogue count doesn't match");
+                        }
+                        nnc.Code.AddRange(nc.Code[prevPos..t.Item2]);
+                        var generatedBlock = ConvertDialogue(t.Item1, dialogues[0], nc.Code[t.Item2]);
+                        if (generatedBlock is List<object> l)
+                        {
+                            nnc.Code.AddRange(l);
+                        }
+                        else
+                        {
+                            nnc.Code.Add(generatedBlock);
+                        }
+                        prevPos = t.Item3;
+                        if ((t.Item1 & TYPE_CHARNAME) == 0)
+                        {
+                            dialogues.RemoveAt(0);
+                        }
                     }
-                    nnc.Code.AddRange(nc.Code[prevPos .. t.Item2]);
-                    var generatedBlock = ConvertDialogue(t.Item1, dialogues[0], nc.Code[t.Item2]);
-                    if(generatedBlock is List<object> l)
-                    {
-                        nnc.Code.AddRange(l);
-                    }
-                    else
-                    {
-                        nnc.Code.Add(generatedBlock);
-                    }
-                    prevPos = t.Item3;
-                    if((t.Item1 & TYPE_CHARNAME) == 0)
-                    {
-                        dialogues.RemoveAt(0);
-                    }
+                    nnc.Code.AddRange(current.Code[prevPos..]);
+                    secCode[i] = nnc;
                 }
-                nnc.Code.AddRange(current.Code[prevPos ..]);
-                secCode[i] = nnc;
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"An error occurred while trying to import {nc.Name}, this file will be skipped.");
+                    Console.WriteLine(ex.Message);
+                    Console.WriteLine(ex.StackTrace);
+                }
             }
         }
 

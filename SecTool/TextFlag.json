@@ -1,0 +1,36 @@
+{
+  "flags": [
+    {
+      "GameTitle": "Natsuiro Koi Uta",
+      "GameTitleJP": "夏彩恋歌",
+      "GameID": "natsukoi",
+      "FLG_NAME": 83,
+      "FLG_TITLE": 103,
+      "FLG_SELECT": 114
+    },
+    {
+      "GameTitle": "Minamijuujisei Renka",
+      "GameTitleJP": "南十字星恋歌",
+      "GameID": "nankoi",
+      "FLG_NAME": 107,
+      "FLG_TITLE": 130,
+      "FLG_SELECT": 141
+    },
+    {
+      "GameTitle": "Hanikami Clover",
+      "GameTitleJP": "はにかみCLOVER",
+      "GameID": "hanikami",
+      "FLG_NAME": 84,
+      "FLG_TITLE": 104,
+      "FLG_SELECT": 115
+    },
+    {
+      "GameTitle": "Shukufuku no Kane",
+      "GameTitleJP": "祝福の鐘の音は、桜色の風と共に。",
+      "GameID": "iwaou",
+      "FLG_NAME": 79,
+      "FLG_TITLE": 100,
+      "FLG_SELECT": 112
+    }
+  ]
+}
