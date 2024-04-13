@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "SecTool": {
-      "commandName": "Project",
-      "commandLineArgs": "import nankoi \"E:\\GalGames_Work\\OnWork\\南十字星恋歌\\nankoi_main.sec5.old\" \"E:\\GalGames_Work\\OnWork\\南十字星恋歌\\workspace\\Text\" \"E:\\GalGames_Work\\OnWork\\南十字星恋歌\\nankoi_main.sec5\" "
-    }
-  }
-}

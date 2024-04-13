@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "ArcTool": {
-      "commandName": "Project",
-      "commandLineArgs": "iar unpack \"E:\\GalGames_Work\\OnWork\\南十字星恋歌\\nankoi_main.sec5.old\" \"E:\\GalGames_Work\\OnWork\\南十字星恋歌\\nankoi_main_ui.iar\""
-    }
-  }
-}
