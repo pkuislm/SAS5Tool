@@ -23,6 +23,7 @@ namespace SecTool
                 Console.WriteLine("Minamijuujisei Renka (nankoi)");
                 Console.WriteLine("Natsuiro Koi Uta (natsukoi)");
                 Console.WriteLine("Hanikami Clover (hanikami)");
+                Console.WriteLine("Shukufuku no Kane (iwaou)");
                 return;
             }
 
