@@ -36,27 +36,38 @@ namespace ArcTool
                         break;
                     case "iar":
                         var iarArc = new IarArchive(args[3]);
-                        iarArc.ExtractTo(resource.GetFileList(args[3]), args.Length > 4 ? args[4] : args[3] + "_unpack");
+                        iarArc.ExtractTo(resource.GetIarFileList(args[3]), args.Length > 4 ? args[4] : args[3] + "_unpack");
                         break;
                 }
             }
             else if (args[1] == "pack")
             {
-                var newArcFileName = (args.Length > 4 ? args[4] : args[3]) + ".gar";
+                var newArcFileName = args.Length > 4 ? args[4] : args[3];
                 var newSec5Path = args.Length > 5 ? args[5] : args[2];
                 switch (args[0])
                 {
                     case "gar":
+                    {
+                        if(!newArcFileName.EndsWith(".gar"))
+                            newArcFileName += ".gar";
                         var fileList = GarArchive.Create(args[3], newArcFileName);
                         resource.UpdateGarResourceRecord(fileList, newArcFileName);
                         break;
+                    }
                     case "iar":
+                    {
+                        if (!newArcFileName.EndsWith(".iar"))
+                            newArcFileName += ".iar";
+                        var fileList = IarArchive.Create(args[3], newArcFileName);
+                        resource.UpdateIarResourceRecord(fileList, newArcFileName);
                         break;
+                    }
                 }
                 archives.AddArc(newArcFileName);
                 prog.SetSectionData("RES2", resource.GetData());
                 prog.SetSectionData("REFC", archives.GetData());
                 prog.Save(newSec5Path);
+                Console.WriteLine("Finished.");
             }
             else
             {

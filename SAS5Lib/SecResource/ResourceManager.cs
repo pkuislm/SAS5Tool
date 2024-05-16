@@ -185,6 +185,7 @@ namespace SAS5Lib.SecResource
 
         public void UpdateGarResourceRecord(List<Tuple<int, string>> fileList, string newArcName)
         {
+            Console.WriteLine($"Updating GAR file records({newArcName})...");
             foreach(var file in fileList)
             {
                 var records = Resources.Where(record => record.Properties.ContainsKey("arc-path") && record.Properties["arc-path"].ToString().Contains(file.Item2));
@@ -192,6 +193,21 @@ namespace SAS5Lib.SecResource
                 foreach(var rec in records)
                 {
                     rec.Properties["path"] = newArcName;
+                }
+            }
+        }
+
+        public void UpdateIarResourceRecord(Dictionary<string, int> fileList, string newArcName)
+        {
+            Console.WriteLine($"Updating IAR file records({newArcName})...");
+            foreach (var file in fileList)
+            {
+                var records = Resources.Where(record => record.Properties.ContainsKey("arc-index") && record.Properties.ContainsKey("path") && record.Name == file.Key);
+
+                foreach (var rec in records)
+                {
+                    rec.Properties["path"] = newArcName;
+                    rec.Properties["arc-index"] = file.Value;
                 }
             }
         }
@@ -231,7 +247,7 @@ namespace SAS5Lib.SecResource
             return ms.ToArray();
         }
 
-        public Dictionary<int, string> GetFileList(string arcName)
+        public Dictionary<int, string> GetIarFileList(string arcName)
         {
             arcName = Path.GetFileName(arcName);
             var records = Resources.Where(record => record.Properties.ContainsKey("arc-index") && record.Properties.ContainsKey("path") && record.Properties["path"].ToString().Contains(arcName));

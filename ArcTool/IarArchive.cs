@@ -1,8 +1,11 @@
 ﻿using System.Diagnostics;
-using System.IO;
-using System.Linq.Expressions;
+using System.IO.Compression;
+using System.Numerics;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Text.RegularExpressions;
-using SAS5Lib.SecResource;
+using ICSharpCode.SharpZipLib.Zip.Compression;
+using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -16,96 +19,101 @@ namespace ArcTool
         public BinaryReader m_reader;
         public string m_arcName;
 
-        public class IarImageFile
+        public class IarImage
         {
-            public short Flags;
-            public byte unk02;
-            public bool Compressed;
-            public int unk04;
-            public int UnpackedSize;
-            public int PaletteSize;
-            public int PackedSize;
-            public int unk14;
-            public int OffsetX;
-            public int OffsetY;
-            public int Width;
-            public int Height;
-            public int Stride;
+            public static byte[] Deflate(byte[] buffer)
+            {
+                Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+                using (MemoryStream memoryStream = new MemoryStream())
+                using (DeflaterOutputStream deflaterOutputStream = new DeflaterOutputStream(memoryStream, deflater))
+                {
+                    deflaterOutputStream.Write(buffer, 0, buffer.Length);
+                    deflaterOutputStream.Flush();
+                    deflaterOutputStream.Finish();
 
-            byte[]? PaletteData;
-            byte[] ImageData;
-            BinaryReader m_imageDataReader;
+                    return memoryStream.ToArray();
+                }
+            }
 
-            public IarImageFile(BinaryReader reader, long offset, int arcVersion)
+            public static byte[] Inflate(byte[] buffer)
+            {
+                byte[] block = new byte[256];
+                MemoryStream outputStream = new MemoryStream();
+
+                Inflater inflater = new Inflater();
+                using (MemoryStream memoryStream = new MemoryStream(buffer))
+                using (InflaterInputStream inflaterInputStream = new InflaterInputStream(memoryStream, inflater))
+                {
+                    while (true)
+                    {
+                        int numBytes = inflaterInputStream.Read(block, 0, block.Length);
+                        if (numBytes < 1)
+                            break;
+                        outputStream.Write(block, 0, numBytes);
+                    }
+                }
+
+                return outputStream.ToArray();
+            }
+
+            public static void Extract(BinaryReader reader, long offset, int arcVersion, Dictionary<int, string> fileListDic, string outputPath)
             {
                 var headPos = offset;
                 reader.BaseStream.Position = offset;
 
-                Flags = reader.ReadInt16();
-                unk02 = reader.ReadByte();
-                Compressed = reader.ReadByte() != 0;
-                unk04 = reader.ReadInt32();
-                UnpackedSize = reader.ReadInt32();
-                PaletteSize = reader.ReadInt32();
-                PackedSize = reader.ReadInt32();
-                unk14 = reader.ReadInt32();
-                OffsetX = reader.ReadInt32();
-                OffsetY = reader.ReadInt32();
-                Width = reader.ReadInt32();
-                Height = reader.ReadInt32();
-                Stride = reader.ReadInt32();
+                var Flags = reader.ReadInt16();
+                var unk02 = reader.ReadByte();
+                var Compressed = reader.ReadByte() != 0;
+                var unk04 = reader.ReadInt32();
+                var UnpackedSize = reader.ReadInt32();
+                var PaletteSize = reader.ReadInt32();
+                var PackedSize = reader.ReadInt32();
+                var unk14 = reader.ReadInt32();
+                var OffsetX = reader.ReadInt32();
+                var OffsetY = reader.ReadInt32();
+                var Width = reader.ReadInt32();
+                var Height = reader.ReadInt32();
+                var Stride = reader.ReadInt32();
 
-                reader.BaseStream.Position += GetImageHeaderSize(arcVersion) - (reader.BaseStream.Position - headPos);
+                var metadataSize = Convert.ToInt32(GetImageHeaderSize(arcVersion) - (reader.BaseStream.Position - headPos));
+                var metadataStr = Convert.ToBase64String(Deflate(reader.ReadBytes(metadataSize))).Replace('/', '`');
 
-                if(PaletteSize != 0)
+                var PaletteData = PaletteSize != 0 ? reader.ReadBytes(PaletteSize) : [];
+
+
+                byte[]? ImageData;
+                if (Compressed)
                 {
-                    PaletteData = reader.ReadBytes(PaletteSize);
-                }
-                ImageData = reader.ReadBytes(PackedSize);
-                m_imageDataReader = new BinaryReader(new MemoryStream(ImageData));
-            }
-
-            byte[] GetImageData()
-            {
-                if(Compressed)
-                {
-                    var decompressor = new IarDecompressor(m_imageDataReader);
-                    var data = new byte[UnpackedSize];
-                    decompressor.Unpack(data);
-                    return data;
+                    ImageData = new byte[UnpackedSize];
+                    IarDecompressor.Unpack(reader, ImageData);
                 }
                 else
                 {
-                    return ImageData;
+                    ImageData = reader.ReadBytes(PackedSize);
                 }
-            }
 
-            public void SaveImage(Dictionary<int, string> fileListDic, string outputPath)
-            {
+                using var imageDataReader = new BinaryReader(new MemoryStream(ImageData));
                 //SubLayer
                 if ((Flags & 0x1000) != 0)
                 {
-                    var layerImageOut = File.CreateText(Path.ChangeExtension(outputPath, ".layerImg"));
-                    layerImageOut.WriteLine($"LayerImg({Width},{Height},{Flags},{OffsetX},{OffsetY},{Stride});");
+                    using var layerImageOut = File.CreateText($"{outputPath}.layerImg");
+                    layerImageOut.WriteLine($"LayerImg({Width},{Height},{Flags},{OffsetX},{OffsetY},{Stride},{metadataStr});");
                     int offset_x = 0, offset_y = 0;
 
-                    if (Compressed || PackedSize != UnpackedSize)
-                        m_imageDataReader = new BinaryReader(new MemoryStream(GetImageData()));
-
-                    while (m_imageDataReader.BaseStream.Position != m_imageDataReader.BaseStream.Length)
+                    while (imageDataReader.BaseStream.Position != imageDataReader.BaseStream.Length)
                     {
-                        int cmd = m_imageDataReader.ReadByte();
+                        int cmd = imageDataReader.ReadByte();
                         switch (cmd)
                         {
                             case 0x21:
-                                offset_x += m_imageDataReader.ReadInt16();
-                                offset_y += m_imageDataReader.ReadInt16();
+                                offset_x += imageDataReader.ReadInt16();
+                                offset_y += imageDataReader.ReadInt16();
                                 break;
 
                             case 0x00:
                             case 0x20:
                             {
-                                var indexImg = fileListDic[m_imageDataReader.ReadInt32()];
+                                var indexImg = fileListDic[imageDataReader.ReadInt32()];
  
                                 OffsetX -= offset_x;
                                 OffsetY -= offset_y;
@@ -120,7 +128,7 @@ namespace ArcTool
                                 break;
                             }
                             default:
-                                Trace.WriteLine(string.Format("Unknown layer type 0x{0:X2}", cmd), "IAR");
+                                Trace.WriteLine($"Unknown layer type 0x{cmd:X8}", "IAR");
                                 break;
                         }
                     }
@@ -130,11 +138,9 @@ namespace ArcTool
                 //SubImage
                 else if ((Flags & 0x800) != 0)
                 {
-                    if (Compressed || PackedSize != UnpackedSize)
-                        m_imageDataReader = new BinaryReader(new MemoryStream(GetImageData()));
-                    var baseImgName = fileListDic[m_imageDataReader.ReadInt32()];
+                    var baseImgName = fileListDic[imageDataReader.ReadInt32()];
 
-                    using var writer = new BinaryWriter(File.Open($"{outputPath}.subimg_{baseImgName}.subImg", FileMode.Create));
+                    using var writer = new BinaryWriter(File.Open($"{outputPath}.base_{baseImgName}.{metadataStr}.subImg", FileMode.Create));
                     writer.Write(Flags);
                     writer.Write(Width);
                     writer.Write(Height);
@@ -144,7 +150,7 @@ namespace ArcTool
                     writer.Write(PaletteSize);
                     if (PaletteSize > 0 && PaletteData != null)
                         writer.Write(PaletteData);
-                    writer.Write(m_imageDataReader.ReadBytes(UnpackedSize - 4));
+                    writer.Write(imageDataReader.ReadBytes(UnpackedSize - 4));
                     writer.Flush();
                     writer.Close();
                 }
@@ -154,21 +160,20 @@ namespace ArcTool
                     {
                         case 0x02:
                         {
-                            var image = Image.LoadPixelData<L8>(GetImageData(), Width, Height);
-                            image.SaveAsPng(Path.ChangeExtension(outputPath, "png"));
+                            using var image = Image.LoadPixelData<L8>(ImageData, Width, Height);
+                            image.SaveAsPng($"{outputPath}.{OffsetX}_{OffsetY}.{metadataStr}.png");
                             break;
                         }
                         case 0x1C:
                         {
-                            var image = Image.LoadPixelData<Bgr24>(GetImageData(), Width, Height);
-                            image.SaveAsPng(Path.ChangeExtension(outputPath, "png"));
+                            using var image = Image.LoadPixelData<Bgr24>(ImageData, Width, Height);
+                            image.SaveAsPng($"{outputPath}.{OffsetX}_{OffsetY}.{metadataStr}.png");
                             break;
                         }
                         case 0x3C:
                         {
-                            //File.WriteAllBytes(Path.ChangeExtension(outputPath, "png"), ImageData);
-                            var image = Image.LoadPixelData<Bgra32>(GetImageData(), Width, Height);
-                            image.SaveAsPng(Path.ChangeExtension(outputPath, "png"));
+                            using var image = Image.LoadPixelData<Bgra32>(ImageData, Width, Height);
+                            image.SaveAsPng($"{outputPath}.{OffsetX}_{OffsetY}.{metadataStr}.png");
                             break;
                         }
                         default: throw new NotSupportedException("Not supported IAR image format");
@@ -176,6 +181,242 @@ namespace ArcTool
                 }
             }
 
+            public static void Import(BinaryWriter writer, string inputFile, int fileIndex, Dictionary<string, int> fileMap, int arcVersion)
+            {
+                short Flags = 0;
+                byte unk02 = 0;
+                byte Compressed;
+                int unk04 = 0;
+                int UnpackedSize;
+                int PaletteSize = 0;
+                int PackedSize;
+                int unk14 = 0;
+                int OffsetX = 0;
+                int OffsetY = 0;
+                int Width = 0;
+                int Height = 0;
+                int Stride = 0;
+                byte[]? ImageData = null;
+                byte[]? PaletteData = null;
+                byte[]? MetaData = null;
+                string entryName = "";
+                switch (Path.GetExtension(inputFile))
+                {
+                    case ".png":
+                    {
+                        var match = Regex.Match(Path.GetFileName(inputFile), @"(.+)\.(.+)_(.+)\.(.+)\.png");
+                        if(!match.Success)
+                        {
+                            Console.WriteLine($"Invalid png file name: {inputFile}.");
+                            return;
+                        }
+                        entryName = match.Groups[1].Value;
+                        using var image = Image.Load(inputFile);
+                        Width = image.Width;
+                        Height = image.Height;
+                        Stride = image.Width;
+                        OffsetX = Convert.ToInt32(match.Groups[2].Value);
+                        OffsetY = Convert.ToInt32(match.Groups[3].Value);
+                        MetaData = Inflate(Convert.FromBase64String(match.Groups[4].Value.Replace('`', '/')));
+
+                        switch (image.PixelType.BitsPerPixel)
+                        {
+                            case 8:
+                            {
+                                Flags = 2;
+                                ImageData = new byte[Stride * Height];
+                                image.CloneAs<L8>().CopyPixelDataTo(ImageData);
+                                break;
+                            }
+                            case 24:
+                            {
+                                Flags = 0x1C;
+                                Stride *= 3;
+                                ImageData = new byte[Stride * Height];
+                                image.CloneAs<Bgr24>().CopyPixelDataTo(ImageData);
+                                break;
+                            }
+                            case 32:
+                            {
+                                Flags = 0x3C;
+                                Stride *= 4;
+                                ImageData = new byte[Stride * Height];
+                                image.CloneAs<Bgra32>().CopyPixelDataTo(ImageData);
+                                break;
+                            }
+                            default:
+                            {
+                                Console.WriteLine($"Unsupported bpp({image.PixelType.BitsPerPixel}): {inputFile}.");
+                                return;
+                            }
+                        }
+                        break;
+                    }
+                    case ".layerImg":
+                    {
+                        entryName = Path.GetFileNameWithoutExtension(inputFile);
+                        var texts = File.ReadAllLines(inputFile);
+                        if (texts.Length == 0)
+                        {
+                            Console.WriteLine($"Empty layerImg: {inputFile}.");
+                            return;
+                        }
+
+                        var header = Regex.Match(texts[0], @"LayerImg\((.+),(.+),(.+),(.+),(.+),(.+),(.+)\);");
+                        if(!header.Success)
+                        {
+                            Console.WriteLine($"Invalid layerImg property: {inputFile}.");
+                            return;
+                        }
+
+                        Width = Convert.ToInt32(header.Groups[1].Value);
+                        Height = Convert.ToInt32(header.Groups[2].Value);
+                        Flags = Convert.ToInt16(header.Groups[3].Value);
+                        OffsetX = Convert.ToInt32(header.Groups[4].Value);
+                        OffsetY = Convert.ToInt32(header.Groups[5].Value);
+                        Stride = Convert.ToInt32(header.Groups[6].Value);
+                        MetaData = Inflate(Convert.FromBase64String(header.Groups[7].Value.Replace('`', '/')));
+
+                        var ms = new MemoryStream();
+
+                        {
+                            var imageDataWriter = new BinaryWriter(ms);
+                            short offset_x = 0, offset_y = 0;
+                            for (int i = 1; i < texts.Length; i++)
+                            {
+                                var cmd = Regex.Match(texts[i], @"(Mask|Blend)\((.+),(.+),(.+)\);");
+
+                                if (cmd.Success)
+                                {
+                                    var x = Convert.ToInt16(cmd.Groups[3].Value);
+                                    var y = Convert.ToInt16(cmd.Groups[4].Value);
+
+                                    if (fileMap.TryGetValue(cmd.Groups[2].Value, out int k))
+                                    {
+                                        imageDataWriter.Write((byte)0x21);
+                                        imageDataWriter.Write(Convert.ToInt16(x - offset_x));
+                                        imageDataWriter.Write(Convert.ToInt16(y - offset_y));
+                                        imageDataWriter.Write(cmd.Groups[1].Value == "Mask" ? (byte)0x20 : (byte)0x00);
+                                        imageDataWriter.Write(k);
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"Cannot find file {cmd.Groups[2].Value} needed by layerImg {inputFile}, skipping command \"{texts[i]}\".");
+                                    }
+                                    offset_x = x;
+                                    offset_y = y;
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"Invalid layerImg command: {texts[i]}.");
+                                }
+                            }
+                        }
+                        ImageData = ms.ToArray();
+                        break;
+                    }
+                    case ".subImg":
+                    {
+                        var match = Regex.Match(Path.GetFileName(inputFile), @"(.+)\.base_(.+)\.(.+)\.subImg");
+                        if(!match.Success)
+                        {
+                            Console.WriteLine($"Invalid subImage file name.");
+                            return;
+                        }
+                        entryName = match.Groups[1].Value;
+
+                        if (!fileMap.TryGetValue(match.Groups[2].Value, out int k))
+                        {
+                            Console.WriteLine($"Cannot find base image {match.Groups[2].Value} needed by {entryName}.");
+                            return;
+                        }
+
+                        MetaData = Inflate(Convert.FromBase64String(match.Groups[3].Value.Replace('`', '/')));
+
+                        var ms = new MemoryStream();
+
+                        {
+                            using var reader = new BinaryReader(File.Open(inputFile, FileMode.Open));
+                            Flags = reader.ReadInt16();
+                            Width = reader.ReadInt32();
+                            Height = reader.ReadInt32();
+                            OffsetX = reader.ReadInt32();
+                            OffsetY = reader.ReadInt32();
+                            Stride = reader.ReadInt32();
+                            PaletteSize = reader.ReadInt32();
+
+                            if (PaletteSize > 0)
+                                PaletteData = reader.ReadBytes(PaletteSize);
+
+                            var imageDataWriter = new BinaryWriter(ms);
+                            imageDataWriter.Write(k);
+                            imageDataWriter.Write(reader.ReadBytes(Convert.ToInt32(reader.BaseStream.Length - reader.BaseStream.Position)));
+                        }
+                        ImageData = ms.ToArray();
+                        break;
+                    }
+                }
+
+                Trace.Assert(ImageData != null);
+                UnpackedSize = PackedSize = ImageData.Length;
+                var packedData = IarCompressor.Pack(ImageData);
+
+                if (UnpackedSize > packedData.Length)
+                {
+                    Compressed = 1;
+                    ImageData = packedData;
+                    PackedSize = packedData.Length;
+                }
+                else
+                {
+                    Compressed = 0;
+                }
+
+                var basePos = writer.BaseStream.Position;
+
+                writer.Write(Flags);
+                writer.Write(unk02);
+                writer.Write(Compressed);
+                writer.Write(unk04);
+                writer.Write(UnpackedSize);
+                writer.Write(PaletteSize);
+                writer.Write(PackedSize);
+                writer.Write(unk14);
+                writer.Write(OffsetX);
+                writer.Write(OffsetY);
+                writer.Write(Width);
+                writer.Write(Height);
+                writer.Write(Stride);
+
+                var metadataSize = Convert.ToInt32(GetImageHeaderSize(arcVersion) - (writer.BaseStream.Position - basePos));
+                if(MetaData != null)
+                {
+                    if(MetaData.Length > metadataSize)
+                    {
+                        Console.WriteLine($"Metadata size not match({MetaData.Length}/{metadataSize}), turncating.");
+                        MetaData = MetaData[..metadataSize];
+                        writer.Write(MetaData);
+                    }
+                    else
+                    {
+                        writer.Write(MetaData);
+                        writer.BaseStream.Position += metadataSize - MetaData.Length;
+                    }
+                }
+                else
+                {
+                    writer.BaseStream.Position += metadataSize;
+                }
+
+
+                if (PaletteSize != 0 && PaletteData != null)
+                {
+                    writer.Write(PaletteData);
+                }
+                writer.Write(ImageData);
+
+                fileMap.TryAdd(entryName, fileIndex);
+            }
             static int GetImageHeaderSize(int iarVersion)
             {
                 switch (iarVersion)
@@ -197,119 +438,111 @@ namespace ArcTool
 
             internal sealed class IarDecompressor
             {
-                BinaryReader m_input;
-
-                public IarDecompressor(BinaryReader input)
+                class BitHelper
                 {
-                    m_input = input;
+                    readonly BinaryReader m_reader;
+                    int m_bits = 1;
+
+                    public BitHelper(BinaryReader reader)
+                    {
+                        m_reader = reader;
+                    }
+
+                    public int GetNextBit()
+                    {
+                        if (1 == m_bits)
+                        {
+                            m_bits = m_reader.ReadUInt16() | 0x10000;
+                        }
+                        int b = m_bits & 1;
+                        m_bits >>= 1;
+                        return b;
+                    }
                 }
 
-                int m_bits = 1;
-
-                public void Unpack(byte[] output)
+                public static void Unpack(BinaryReader input, byte[] output)
                 {
-                    try
+                    var bh = new BitHelper(input);
+                        
+                    int dst = 0;
+                    while (dst < output.Length)
                     {
-                        m_bits = 1;
-                        int dst = 0;
-                        while (dst < output.Length)
+                        if (bh.GetNextBit() == 1)
                         {
-                            if (GetNextBit() == 1)
+                            output[dst++] = input.ReadByte();
+                            continue;
+                        }
+                        int offset, count;
+                        if (bh.GetNextBit() == 1)// 3 <= duplicate count < 272
+                        {
+                            //1~8192
+                            int tmp = bh.GetNextBit();
+                            if (bh.GetNextBit() == 1)
+                                offset = 1;
+                            else if (bh.GetNextBit() == 1)
+                                offset = 0x201;
+                            else
                             {
-                                output[dst++] = m_input.ReadByte();
-                                continue;
-                            }
-                            int offset, count;
-                            if (GetNextBit() == 1)// 3 <= duplicate count < 272
-                            {
-                                //1~8192
-                                int tmp = GetNextBit();
-                                if (GetNextBit() == 1)
-                                    offset = 1;
-                                else if (GetNextBit() == 1)
-                                    offset = 0x201;
+                                tmp = (tmp << 1) | bh.GetNextBit();
+                                if (bh.GetNextBit() == 1)
+                                    offset = 0x401;
                                 else
                                 {
-                                    tmp = (tmp << 1) | GetNextBit();
-                                    if (GetNextBit() == 1)
-                                        offset = 0x401;
+                                    tmp = (tmp << 1) | bh.GetNextBit();
+                                    if (bh.GetNextBit() == 1)
+                                        offset = 0x801;
                                     else
                                     {
-                                        tmp = (tmp << 1) | GetNextBit();
-                                        if (GetNextBit() == 1)
-                                            offset = 0x801;
-                                        else
-                                        {
-                                            offset = 0x1001;
-                                            tmp = (tmp << 1) | GetNextBit();
-                                        }
+                                        offset = 0x1001;
+                                        tmp = (tmp << 1) | bh.GetNextBit();
                                     }
                                 }
-                                offset += (tmp << 8) | m_input.ReadByte();
-
-                                if (GetNextBit() == 1)
-                                    count = 3;
-                                else if (GetNextBit() == 1)
-                                    count = 4;
-                                else if (GetNextBit() == 1)
-                                    count = 5;
-                                else if (GetNextBit() == 1)
-                                    count = 6;
-                                else if (GetNextBit() == 1)
-                                    count = 7 + GetNextBit();
-                                else if (GetNextBit() == 1)
-                                    count = 17 + m_input.ReadByte(); //17 ~ 272
-                                else
-                                {
-                                    //9 ~ 16
-                                    count = GetNextBit() << 2;
-                                    count |= GetNextBit() << 1;
-                                    count |= GetNextBit();
-                                    count += 9;
-                                }
                             }
-                            else//duplicate count == 2 && 1 <= offset < 0x100 && 0x100 < offset <= 2047
+                            offset += (tmp << 8) | input.ReadByte();
+
+                            if (bh.GetNextBit() == 1)
+                                count = 3;
+                            else if (bh.GetNextBit() == 1)
+                                count = 4;
+                            else if (bh.GetNextBit() == 1)
+                                count = 5;
+                            else if (bh.GetNextBit() == 1)
+                                count = 6;
+                            else if (bh.GetNextBit() == 1)
+                                count = 7 + bh.GetNextBit();
+                            else if (bh.GetNextBit() == 1)
+                                count = 17 + input.ReadByte(); //17 ~ 272
+                            else
                             {
-                                count = 2;
-                                if (GetNextBit() == 1)
-                                {
-                                    //offset >= 0x100
-                                    offset = GetNextBit() << 10;
-                                    offset |= GetNextBit() << 9;
-                                    offset |= GetNextBit() << 8;
-                                    offset = (offset | m_input.ReadByte()) + 0x100;
-                                }
-                                else
-                                {
-                                    //offset < 0xFF
-                                    offset = 1 + m_input.ReadByte();//maximum == 0xFE
-                                    if (0x100 == offset)//offset == 0xFF -> End
-                                        break;
-                                }
+                                //9 ~ 16
+                                count = bh.GetNextBit() << 2;
+                                count |= bh.GetNextBit() << 1;
+                                count |= bh.GetNextBit();
+                                count += 9;
                             }
-
-                            CopyOverlapped(output, dst - offset, dst, count);
-                            dst += count;
                         }
-                    }catch(Exception e)
-                    {
-
+                        else//duplicate count == 2
+                        {
+                            count = 2;
+                            if (bh.GetNextBit() == 1)
+                            {
+                                //offset = 0x100 ~ 0x8FF (256 ~ 2303)
+                                offset = bh.GetNextBit() << 10;
+                                offset |= bh.GetNextBit() << 9;
+                                offset |= bh.GetNextBit() << 8;
+                                offset = (offset | input.ReadByte()) + 0x100;
+                            }
+                            else
+                            {
+                                //offset = 0x1 ~ 0xFF
+                                offset = 1 + input.ReadByte();//maximum == 0xFE
+                                if (0x100 == offset)//offset == 0xFF -> End
+                                    break;
+                            }
+                        }
+                        CopyOverlapped(output, dst - offset, dst, count);
+                        dst += count;
                     }
-                    finally
-                    {
-                    }
-                    
-                }
-
-                int GetNextBit()
-                {
-                    if (1 == m_bits)
-                    {
-                        m_bits = m_input.ReadUInt16() | 0x10000;
-                    }
-                    int b = m_bits & 1;
-                    m_bits >>= 1;
-                    return b;
                 }
 
                 public static void CopyOverlapped(byte[] data, int src, int dst, int count)
@@ -333,247 +566,435 @@ namespace ArcTool
 
             internal sealed class IarCompressor
             {
-                ushort m_bits;
-                int m_bitsPos;
-                MemoryStream m_memoryStream;
-                BinaryWriter m_writer;
-                MemoryStream m_bufferMemoryStream;
-                BinaryWriter m_bufferWriter;
-
-                int m_bufferPtr;
-                int m_maxBufLen = 8192;
-                public IarCompressor()
+                public class BufferWriter
                 {
-                    m_memoryStream = new MemoryStream();
-                    m_bufferMemoryStream = new MemoryStream();
-                    m_writer = new BinaryWriter(m_memoryStream);
-                    m_bufferWriter = new BinaryWriter(m_bufferMemoryStream);
-                    m_bufferPtr = 0;
-                }
+                    private ushort m_ctl;
+                    private int m_pos;
+                    private readonly List<byte> m_outputBuf;
+                    private readonly List<byte> m_codeBuf;
 
-                public byte[] Pack(byte[] input)
-                {
-                    int dataOffset = 0;
-                    while(dataOffset < input.Length)
+                    static readonly ushort[] elemA = [1, 0x201, 0x401, 0x801, 0x1001];
+                    static readonly ushort[] elemB = [0x40, 0x20, 8, 2, 0];
+                    public BufferWriter()
                     {
-                        //Tuple<Index, Length>
-                        var match = Find(input, dataOffset);
-                        if(match.Item2 == 0)
-                        {
-                            SetBits(1);
-                            m_bufferWriter.Write(input[dataOffset++]);
+                        m_outputBuf = [];
+                        m_codeBuf = [];
+                        m_ctl = 0;
+                        m_pos = 0;
+                    }
 
-                            if ((dataOffset - m_bufferPtr) > m_maxBufLen)
-                                m_bufferPtr++;
-                        }
-                        else
+                    void SetBits(ushort val, int bitCount = 1)
+                    {
+                        while (bitCount != 0)
                         {
-                            if (match.Item2 == 2)
+                            if (m_pos == 16)
                             {
-                                SetBits(0, 2);
-                                if(match.Item1 <= 0xFF)
-                                {
-                                    SetBits(0);
-                                    m_bufferWriter.Write(Convert.ToByte(match.Item1 - 1));
-                                }
-                                else
-                                {
-                                    SetBits(1);
-                                    var offset = match.Item1 - 0x100;
-                                    SetBits(Convert.ToUInt16((offset >> 10) & 1), 1);
-                                    SetBits(Convert.ToUInt16((offset >>  9) & 1), 1);
-                                    SetBits(Convert.ToUInt16((offset >>  8) & 1), 1);
-                                    m_bufferWriter.Write(Convert.ToByte(offset & 0xFF));
-                                }
+                                Flush();
+                            }
+
+                            m_ctl |= (ushort)((val & 1) << m_pos++);
+                            val >>= 1;
+
+                            bitCount--;
+                        }
+                    }
+
+                    public void PutUncoded(byte input)
+                    {
+                        SetBits(1);
+                        m_codeBuf.Add(input);
+                    }
+
+                    public void PutPair(int offset, int length)
+                    {
+                        if (length < 2)
+                            throw new ArgumentException("Cannot put pair that length lower than 2.");
+                        if (length == 2)
+                        {
+                            SetBits(0, 2);
+                            if (offset <= 0xFF)
+                            {
+                                SetBits(0);
+                                m_codeBuf.Add(Convert.ToByte(offset - 1));
                             }
                             else
                             {
-                                //repeats greater than 2 bytes
-                                SetBits(2, 2);
-                                var offset = match.Item1;
-                                byte offsetPart = (byte)((offset & 0xFF) - 1);
+                                SetBits(1);
+                                offset -= 0x100;
+                                SetBits(Convert.ToUInt16((offset >> 10) & 1), 1);
+                                SetBits(Convert.ToUInt16((offset >> 9) & 1), 1);
+                                SetBits(Convert.ToUInt16((offset >> 8) & 1), 1);
+                                m_codeBuf.Add(Convert.ToByte(offset & 0xFF));
+                            }
+                        }
+                        else
+                        {
+                            //repeats greater than 2 bytes
+                            SetBits(2, 2);
+                            byte offsetPart = (byte)((offset & 0xFF) - 1);
 
-                                ushort[] elemA = [1, 0x201, 0x401, 0x801, 0x1001];
-                                ushort[] elemB = [0x40, 0x20, 8, 2, 0];
-                                bool flag = false;
-                                for (int j = 0; j < 0xF; j++)
+                            bool flag = false;
+                            for (int j = 0; j <= 0xF; j++)
+                            {
+                                if (flag)
+                                    break;
+                                for (int i = 0; i < 5; i++)
                                 {
-                                    if (flag)
-                                        break;
-                                    for (int i = 0; i < 5; i++)
+                                    if (elemA[i] > offset)
+                                        continue;
+                                    if ((elemA[i] + (j << 8) + offsetPart) == offset)
                                     {
-                                        if (elemA[i] > match.Item1)
-                                            continue;
-                                        if ((elemA[i] + j * 0x100 + offsetPart) == match.Item1)
+                                        var bitlen = i switch
                                         {
-                                            var bitlen = i switch
-                                            {
-                                                0 => 2,
-                                                1 => 3,
-                                                2 => 5,
-                                                3 => 7,
-                                                _ => 8,
-                                            };
+                                            0 => 2,
+                                            1 => 3,
+                                            2 => 5,
+                                            3 => 7,
+                                            _ => 8,
+                                        };
 
-                                            int code = 0;
-                                            if (i < 2)
-                                            {
-                                                code = (j & 1) << 7 | elemB[i];
-                                            }
-                                            else if (i < 3)
-                                            {
-                                                //                          1 << 7
-                                                code = (j & 1) << 4 | (j & 2) << 6 | elemB[i];
-                                            }
-                                            else if (i < 4)
-                                            {
-                                                //                          1 << 4         1 << 7
-                                                code = (j & 1) << 2 | (j & 2) << 3 | (j & 4) << 5 | elemB[i];
-                                            }
-                                            else
-                                            {
-                                                //                          1 << 2         1 << 4         1 << 7
-                                                code = (j & 1) << 0 | (j & 2) << 1 | (j & 4) << 2 | (j & 8) << 4 | elemB[i];
-                                            }
-
-                                            for (int b = 0; b < bitlen; b++)
-                                            {
-                                                SetBits((ushort)((code & 0x80) >> 7));
-                                                code <<= 1;
-                                            }
-                                            m_bufferWriter.Write(Convert.ToByte(offsetPart));
-                                            flag = true;
-                                            break;
+                                        int code;
+                                        if (i < 2)
+                                        {
+                                            code = (j & 1) << 7 | elemB[i];
                                         }
-                                    }
-                                }
-
-                                switch(match.Item2)
-                                {
-                                    case 3:
-                                        SetBits(1);
-                                        break;
-                                    case 4:
-                                        SetBits(2, 2);//01
-                                        break;
-                                    case 5:
-                                        SetBits(4, 3);//001
-                                        break;
-                                    case 6:
-                                        SetBits(8, 4);//0001
-                                        break;
-                                    case 7:
-                                        SetBits(16, 6);//000010
-                                        break;
-                                    case 8:
-                                        SetBits(48, 6);//000011
-                                        break;
-                                    default:
-                                    {
-                                        var count = match.Item2;
-                                        if (count <= 16)
+                                        else if (i < 3)
                                         {
-                                            SetBits(0, 6);
-                                            count -= 9;
-                                            SetBits((ushort)(count >> 2));
-                                            SetBits((ushort)(count >> 1));
-                                            SetBits((ushort)(count >> 0));
+                                            //                          1 << 7
+                                            code = (j & 1) << 4 | (j & 2) << 6 | elemB[i];
+                                        }
+                                        else if (i < 4)
+                                        {
+                                            //                          1 << 4         1 << 7
+                                            code = (j & 1) << 2 | (j & 2) << 3 | (j & 4) << 5 | elemB[i];
                                         }
                                         else
                                         {
-                                            SetBits(32, 6);
-                                            count -= 17;
-                                            m_bufferWriter.Write(Convert.ToByte(count));
+                                            //                          1 << 2         1 << 4         1 << 7
+                                            code = (j & 1) << 0 | (j & 2) << 1 | (j & 4) << 2 | (j & 8) << 4 | elemB[i];
                                         }
+
+                                        for (int b = 0; b < bitlen; b++)
+                                        {
+                                            SetBits((ushort)((code & 0x80) >> 7));
+                                            code <<= 1;
+                                        }
+                                        m_codeBuf.Add(Convert.ToByte(offsetPart));
+                                        flag = true;
                                         break;
                                     }
                                 }
                             }
 
-                            dataOffset += match.Item2;
-                            if(dataOffset - m_bufferPtr > m_maxBufLen)
-                                m_bufferPtr += (dataOffset - m_bufferPtr) - m_maxBufLen;
+                            switch (length)
+                            {
+                                case 3:
+                                    SetBits(1);
+                                    break;
+                                case 4:
+                                    SetBits(2, 2);//01
+                                    break;
+                                case 5:
+                                    SetBits(4, 3);//001
+                                    break;
+                                case 6:
+                                    SetBits(8, 4);//0001
+                                    break;
+                                case 7:
+                                    SetBits(16, 6);//000010
+                                    break;
+                                case 8:
+                                    SetBits(48, 6);//000011
+                                    break;
+                                default:
+                                {
+                                    var count = length;
+                                    if (count <= 16)
+                                    {
+                                        SetBits(0, 6);
+                                        count -= 9;
+                                        SetBits((ushort)(count >> 2));
+                                        SetBits((ushort)(count >> 1));
+                                        SetBits((ushort)(count >> 0));
+                                    }
+                                    else
+                                    {
+                                        SetBits(32, 6);
+                                        count -= 17;
+                                        m_codeBuf.Add(Convert.ToByte(count));
+                                    }
+                                    break;
+                                }
+                            }
                         }
                     }
-                    //Set End Flag
-                    SetBits(0, 3);
-                    m_bufferWriter.Write(0xFF);
-                    FlushBitsStream();
 
-                    return m_memoryStream.ToArray();
-                }
-
-                void SetBits(ushort val, int bitCount = 1)
-                {
-                    while(bitCount != 0)
+                    public void Flush()
                     {
-                        if (m_bitsPos == 16)
-                        {
-                            m_writer.Write(m_bits);
-                            m_bitsPos = 0;
-                            m_bits = 0;
-                            m_bufferMemoryStream.WriteTo(m_memoryStream);
-                            m_bufferMemoryStream.Position = 0;
-                            m_bufferMemoryStream.SetLength(0);
-                        }
+                        m_pos = 0;
 
-                        m_bits |= (ushort)((val & 1) << m_bitsPos);
-                        val >>= 1;
+                        m_outputBuf.Add((byte)m_ctl);
+                        m_outputBuf.Add((byte)(m_ctl >> 8));
+                        m_ctl = 0;
 
-                        //m_bits <<= 1;
-                        m_bitsPos++;
+                        m_outputBuf.AddRange(m_codeBuf);
+                        m_codeBuf.Clear();
+                    }
 
-                        bitCount--;
+                    public byte[] GetBytes()
+                    {
+                        //Set End Flag
+                        SetBits(0, 3);
+                        m_codeBuf.Add(0xFF);
+                        Flush();
+                        return m_outputBuf.ToArray();
                     }
                 }
 
-                void FlushBitsStream()
-                {
-                    m_writer.Write(m_bits);
-                    m_bitsPos = 0;
-                    m_bits = 0;
-                    m_bufferMemoryStream.WriteTo(m_memoryStream);
-                    m_bufferMemoryStream.Position = 0;
-                    m_bufferMemoryStream.SetLength(0);
-                }
+                //RingBuffer, must be power of 2
+                const int BufferSize = 1 << 13;
+                //Maximum matching size
+                const int SearchSize = 255;
+                //Minimum pair length
+                const int THRESHOLD = 2;
 
-                //Index, Length
-                public Tuple<int, int> Find(byte[] input, int inputOffset)
+                const int NIL = BufferSize;
+                //Original source: https://github.com/opensource-apple/kext_tools/blob/master/compression.c
+                public class EncodeState
                 {
-                    var ptr = m_bufferPtr;
-                    List<Tuple<int, int>> offsets = [];
+                    /*
+                     * initialize state, mostly the trees
+                     *
+                     * For i = 0 to BufferSize - 1, rchild[i] and lchild[i] will be the right and left 
+                     * children of node i.  These nodes need not be initialized.  Also, parent[i] 
+                     * is the parent of node i.  These (parent nodes) are initialized to NIL (= BufferSize), which stands 
+                     * for 'not used.'  For i = 0 to 255, rchild[BufferSize + i + 1] is the root of the 
+                     * tree for strings that begin with character i.  These are initialized to NIL. 
+                     * Note there are 256 trees. 
+                     */
+                    public int[] lchild = new int[BufferSize + 1];
+                    public int[] rchild = Enumerable.Repeat(NIL, BufferSize + 1 + 256).ToArray();
+                    public int[] parent = Enumerable.Repeat(NIL, BufferSize + 1).ToArray();
 
-                    while(ptr < inputOffset)
+                    public byte[] text_buf = Enumerable.Repeat((byte)0xFF, BufferSize + SearchSize + 1).ToArray();
+                    public int[] text_buf_map = new int[BufferSize + SearchSize + 1];
+
+                    public int match_position = 0;
+                    public int match_length = 0;
+                };
+
+                /*
+                 * Inserts string of (length=SearchSize, text_buf[index..index + SearchSize - 1]) into one of the trees
+                 * (text_buf[index]'th tree) and returns the longest-match position and length
+                 * via the global variables match_position and match_length.
+                 * If match_length = SearchSize, then removes the old node in favor of the new one,
+                 * because the old one will be deleted sooner. Note index plays double role,
+                 * as tree node and position in buffer.
+                 */
+                static void InsertNode(EncodeState sp, int index)
+                {
+                    int cmp = 1;
+                    int p = BufferSize + sp.text_buf[index] + 1;//find root node of text_buf[index]'s tree
+                    sp.rchild[index] = sp.lchild[index] = NIL;
+                    sp.match_length = 0;
+                    for (; ; )
                     {
-                        var startPos = ptr;
-                        var srcPos = inputOffset;
-                        var length = 0;
-
-                        while (srcPos < input.Length && input[startPos] == input[srcPos])
+                        if (cmp >= 0)
                         {
-                            startPos++;
-                            srcPos++;
-                            length++;
-                            if(length > 270)
+                            if (sp.rchild[p] != NIL)
+                                p = sp.rchild[p];
+                            else
+                            {
+                                sp.rchild[p] = index;
+                                sp.parent[index] = p;
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            if (sp.lchild[p] != NIL)
+                                p = sp.lchild[p];
+                            else
+                            {
+                                sp.lchild[p] = index;
+                                sp.parent[index] = p;
+                                return;
+                            }
+                        }
+
+                        //Faster string comparsion
+                        var i = 1;
+                        while(i < SearchSize)
+                        {
+                            var u = Vector256.Create(sp.text_buf, index + i);
+                            var v = Vector256.Create(sp.text_buf,     p + i);
+                            var w = BitOperations.TrailingZeroCount(~Avx2.MoveMask(Avx2.CompareEqual(u, v)));
+
+                            i += w;
+                            if(w != 32)
                             {
                                 break;
                             }
                         }
-                        if(length >= 2)
+                        if (i > SearchSize)
+                            i = SearchSize;
+
+                        cmp = sp.text_buf[index + i] - sp.text_buf[p + i];
+
+                        if (i > sp.match_length)
                         {
-                            offsets.Add(new(inputOffset - ptr, length));
+                            sp.match_position = p;
+                            if ((sp.match_length = i) >= SearchSize)
+                                break;
                         }
-                        ptr++;
                     }
-                    if(offsets.Count > 0)
-                    {
-                        var result = offsets.OrderByDescending(k => k.Item2).ToList();
-                        return result[0];
-                    }
+                    sp.parent[index] = sp.parent[p];
+                    sp.lchild[index] = sp.lchild[p];
+                    sp.rchild[index] = sp.rchild[p];
+                    sp.parent[sp.lchild[p]] = index;
+                    sp.parent[sp.rchild[p]] = index;
+                    if (sp.rchild[sp.parent[p]] == p)
+                        sp.rchild[sp.parent[p]] = index;
+                    else
+                        sp.lchild[sp.parent[p]] = index;
+                    sp.parent[p] = NIL;  /* remove p */
+                }
+
+                /* deletes node p from tree */
+                static void DeleteNode(EncodeState sp, int p)
+                {
+                    int q;
+                    if (sp.parent[p] == NIL)
+                        return;  /* not in tree */
+                    if (sp.rchild[p] == NIL)
+                        q = sp.lchild[p];
+                    else if (sp.lchild[p] == NIL)
+                        q = sp.rchild[p];
                     else
                     {
-                        return new(0, 0);
+                        q = sp.lchild[p];
+                        if (sp.rchild[q] != NIL)
+                        {
+                            do
+                            {
+                                q = sp.rchild[q];
+                            } while (sp.rchild[q] != NIL);
+                            sp.rchild[sp.parent[q]] = sp.lchild[q];
+                            sp.parent[sp.lchild[q]] = sp.parent[q];
+                            sp.lchild[q] = sp.lchild[p];
+                            sp.parent[sp.lchild[p]] = q;
+                        }
+                        sp.rchild[q] = sp.rchild[p];
+                        sp.parent[sp.rchild[p]] = q;
                     }
+                    sp.parent[q] = sp.parent[p];
+                    if (sp.rchild[sp.parent[p]] == p)
+                        sp.rchild[sp.parent[p]] = q;
+                    else
+                        sp.lchild[sp.parent[p]] = q;
+                    sp.parent[p] = NIL;
+                }
+
+                public static byte[] Pack(byte[] input)
+                {
+                    EncodeState sp = new();
+
+                    int i;
+                    int len, last_match_length;
+
+                    int r = BufferSize - SearchSize;
+                    int s = 0;
+                    int inputIdx = 0;
+
+                    /* Read F bytes into the last F bytes of the buffer(wait for search) */
+                    for (len = 0; len < SearchSize && inputIdx < input.Length; len++)
+                    {
+                        sp.text_buf[r + len] = input[inputIdx];
+                        sp.text_buf_map[r + len] = inputIdx;
+                        inputIdx++;
+                    }
+
+                    /*
+                     * Insert the whole string just read.
+                     * The global variables match_length and match_position are set.
+                     */
+                    InsertNode(sp, r);
+
+                    var bw = new BufferWriter();
+
+                    var encode_pos = 0;
+                    do
+                    {
+                        if (encode_pos == 0 || sp.match_length < THRESHOLD)
+                        {
+                            sp.match_length = 1;
+                            bw.PutUncoded(sp.text_buf[r]);
+                            encode_pos++;
+                        }
+                        else
+                        {
+                            var offset = encode_pos - sp.text_buf_map[sp.match_position];
+
+                            if(offset > 2048 && sp.match_length == THRESHOLD)
+                            {
+                                sp.match_length = 1;
+                                bw.PutUncoded(sp.text_buf[r]);
+                                encode_pos++;
+                            }
+                            else
+                            {
+                                bw.PutPair(offset, sp.match_length);
+                                encode_pos += sp.match_length;
+                            }
+                        }
+
+                        byte c;
+                        last_match_length = sp.match_length;
+                        for (i = 0; i < last_match_length && inputIdx < input.Length; i++)
+                        {
+                            DeleteNode(sp, s);    /* Delete old strings and */
+                            c = input[inputIdx];
+                            sp.text_buf[s] = c;    /* read new bytes */
+                            sp.text_buf_map[s] = inputIdx;
+
+                            /*
+                             * If the position is near the end of buffer, extend the buffer
+                             * to make string comparison easier.
+                             */
+                            if (s < (SearchSize - 1))
+                            {
+                                sp.text_buf[s + BufferSize] = c;
+                                sp.text_buf_map[s + BufferSize] = inputIdx;
+                            }
+
+                            inputIdx++;
+                            /* Since this is a ring buffer, increment the position modulo BufferSize. */
+                            s = (s + 1) & (BufferSize - 1);
+                            r = (r + 1) & (BufferSize - 1);
+
+                            /* Register the string in text_buf[r..r+SearchSize-1] */
+                            InsertNode(sp, r);
+                        }
+                        while (i++ < last_match_length)
+                        {
+                            DeleteNode(sp, s);
+
+                            /* After the end of text, no need to read, */
+                            s = (s + 1) & (BufferSize - 1);
+                            r = (r + 1) & (BufferSize - 1);
+
+                            /* but buffer may not be empty. */
+                            if ((--len) > 0)
+                                InsertNode(sp, r);
+
+                            //Match length can't exceed the input length
+                            if (sp.match_length > len)
+                                sp.match_length = 1;
+                        }
+
+                    } while (len > 0);
+
+                    return bw.GetBytes();
                 }
             }
         }
@@ -589,8 +1010,8 @@ namespace ArcTool
             m_arcVersion = (m_reader.ReadInt16() << 12) | (int)m_reader.ReadInt16();
             m_isArcLongOffset = m_arcVersion >= 3000;
 
-            var headerSize = m_reader.ReadInt32();
-            var infoSize = m_reader.ReadInt32();
+            var headerSize = m_reader.ReadInt32();//0xC
+            var infoSize = m_reader.ReadInt32();//0x14
 
             var trash = m_reader.ReadInt64();
 
@@ -617,9 +1038,65 @@ namespace ArcTool
             foreach (var key in fileListDic.Keys)
             {
                 Console.WriteLine($"Writing {fileListDic[key]}...");
-                IarImageFile iarImage = new(m_reader, m_arcFileOffset[key], m_arcVersion);
-                iarImage.SaveImage(fileListDic, Path.Combine(outputPath, fileListDic[key]));
+                IarImage.Extract(m_reader, m_arcFileOffset[key], m_arcVersion, fileListDic, Path.Combine(outputPath, fileListDic[key]));
             }
+        }
+
+        public static Dictionary<string, int> Create(string folder, string outputArcName)
+        {
+            Dictionary<string, int> fileList = [];
+
+            var normalImgList = Directory.EnumerateFiles(folder, "*.png", SearchOption.TopDirectoryOnly);
+            var layerImgList = Directory.EnumerateFiles(folder, "*.layerImg", SearchOption.TopDirectoryOnly);
+            var subImgList = Directory.EnumerateFiles(folder, "*.subImg", SearchOption.TopDirectoryOnly);
+
+            using var writer = new BinaryWriter(File.Open(Path.Combine(folder, "..", outputArcName), FileMode.Create));
+            writer.Write(0x20726169);
+            writer.Write(0x00010004);//Lock version to 0x4001
+            writer.Write(0xC);
+            writer.Write(0x14);
+            writer.Write(0);
+            writer.Write(0);
+
+            var fileCountOffset = writer.BaseStream.Position;
+            writer.BaseStream.Position += 8 * (normalImgList.Count() + layerImgList.Count() + subImgList.Count() + 1);
+
+            List<long> fileOffsets = [];
+
+            int inArcIndex = 0;
+
+            {
+                foreach(var file in normalImgList)
+                {
+                    Console.WriteLine($"WritingImg: {file} ...");
+                    fileOffsets.Add(writer.BaseStream.Position);
+                    IarImage.Import(writer, file, inArcIndex++, fileList, 0x4001);
+                }
+
+                foreach(var file in layerImgList)
+                {
+                    Console.WriteLine($"WritingLayerImg: {file} ...");
+                    fileOffsets.Add(writer.BaseStream.Position);
+                    IarImage.Import(writer, file, inArcIndex++, fileList, 0x4001);
+                }
+
+                foreach (var file in subImgList)
+                {
+                    Console.WriteLine($"WritingSubImg: {file} ...");
+                    fileOffsets.Add(writer.BaseStream.Position);
+                    IarImage.Import(writer, file, inArcIndex++, fileList, 0x4001);
+                }
+            }
+
+            writer.BaseStream.Position = fileCountOffset;
+            writer.Write(fileList.Count);
+            writer.Write(fileList.Count);
+            foreach(var o in fileOffsets)
+            {
+                writer.Write(o);
+            }
+
+            return fileList;
         }
     }
 }
