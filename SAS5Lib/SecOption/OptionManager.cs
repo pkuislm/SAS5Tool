@@ -36,9 +36,26 @@ namespace SAS5Lib.SecOption
             File.WriteAllText(path, JsonConvert.SerializeObject(_secOptionMap, Formatting.Indented , new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.Objects }));
         }
 
-        public void Load(string path)
+        public void Load(string path, bool debugBuild)
         {
             _secOptionMap = JsonConvert.DeserializeObject<SecOptionMap>(File.ReadAllText(path), new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.Objects });
+            if (debugBuild)
+            {
+                if (_secOptionMap != null
+                && _secOptionMap.Map.TryGetValue("Title", out var val)
+                && val is SecOptionString s1
+                && _secOptionMap.Map.TryGetValue("Registry", out var val2)
+                && val2 is SecOptionMap m1
+                && m1.Map.TryGetValue("Application", out var val3)
+                && val3 is SecOptionString s2)
+                {
+                    var suffix = $" Debug build[{DateTime.Now.ToString().Replace('/', '-').Replace(':', '-')}]";
+                    s1.Value.Text += suffix;
+                    s2.Value.Text += suffix;
+                    s1.Value.IsEdited = true;
+                    s2.Value.IsEdited = true;
+                }
+            }
         }
 
         public void UpdateExportFuncAddr(Dictionary<long, long> addresses)
@@ -55,6 +72,7 @@ namespace SAS5Lib.SecOption
                     }
                     if(addresses.TryGetValue(optionInt.Value, out var newAddress))
                     {
+                        Console.WriteLine($"{k}: {optionInt.Value} -> {newAddress}");
                         optionInt.Value = Convert.ToInt32(newAddress);
                     }
                     else

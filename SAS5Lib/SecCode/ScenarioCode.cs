@@ -95,6 +95,14 @@ namespace SAS5Lib.SecCode
                 }
                 else if (cb is NamedCode nc)
                 {
+                    if(_source != null)
+                    {
+                        var src = _source.SourceFiles.Find(f => f.Name == nc.Name);
+                        if(src != null)
+                        {
+                            src.Position = Convert.ToInt32(writer.BaseStream.Position);
+                        }
+                    }
                     foreach(var obj in nc.Code)
                     {
                         WriteCodeObj(obj);

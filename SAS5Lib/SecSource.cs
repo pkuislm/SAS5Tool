@@ -43,6 +43,38 @@ namespace SAS5Lib
                 }
             }
 
+            public void Write(BinaryWriter bw)
+            {
+                bw.Write(v1);
+                bw.Write(v2);
+                bw.Write(v3);
+                bw.Write(v4);
+                if (v4 == 0)
+                {
+                    return;
+                }
+                if ((v1 & 1) != 0)
+                {
+                    if(v5 is ushort[] arr)
+                    {
+                        foreach(var v in arr)
+                        {
+                            bw.Write(v);
+                        }
+                    }
+                }
+                else
+                {
+                    if (v5 is uint[] arr)
+                    {
+                        foreach (var v in arr)
+                        {
+                            bw.Write(v);
+                        }
+                    }
+                }
+            }
+
             public override string ToString()
             {
                 return $"V1: {v1:X8} V2: {v2:X8} V3: {v3:X8} V4: {v4:X8}";
@@ -60,6 +92,13 @@ namespace SAS5Lib
                 Name = Utils.ReadCString(reader);
                 Position = reader.ReadInt32();
                 Positions = [];
+            }
+
+            public void Write(BinaryWriter bw)
+            {
+                bw.Write(CodepageManager.Instance.ExportGetBytes(Name));
+                bw.Write((byte)0);
+                bw.Write(Position);
             }
 
             public override string ToString()
@@ -98,6 +137,29 @@ namespace SAS5Lib
                 }
             }
             Trace.Assert(reader.BaseStream.Position == reader.BaseStream.Length);
+        }
+
+        public byte[] GetData()
+        {
+            var ms = new MemoryStream();
+            using var writer = new BinaryWriter(ms);
+
+            writer.Write(SourceFiles.Count);
+            for(int i = 0; i < SourceFiles.Count; i++)
+            {
+                SourceFiles[i].Write(writer);
+            }
+            writer.Write(0x54505A43);
+            for (int i = 0; i < SourceFiles.Count; i++)
+            {
+                writer.Write(SourceFiles[i].Positions.Count);
+                foreach(var line in SourceFiles[i].Positions)
+                {
+                    line.Write(writer);
+                }
+            }
+
+            return ms.ToArray();
         }
     }
 }

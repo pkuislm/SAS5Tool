@@ -65,9 +65,87 @@ namespace SecTool
             }
         }
 
-        public static Script GetText(List<object> secCode)
+        public static List<string> GetString(List<object> secCode, string scriptName)
+        {
+            List<string> result = [];
+
+            foreach (var obj in secCode)
+            {
+                if (obj is not NamedCode nc || !nc.Name.Contains(scriptName))
+                {
+                    continue;
+                }
+                foreach (var code in nc.Code)
+                {
+                    if (code is ExecutorCommand cmd)
+                    {
+                        if (cmd.Expression == null)
+                        {
+                            continue;
+                        }
+                        foreach (var exp in cmd.Expression)
+                        {
+                            if(exp.Clauses == null)
+                            {
+                                continue;
+                            }
+                            foreach(var clause in  exp.Clauses)
+                            {
+                                if(clause.Data is EditableString str && !string.IsNullOrEmpty(str.Text))
+                                {
+                                    result.Add(str.Text);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+        public static void SetString(List<object> secCode, string scriptName, List<string> strs)
+        {
+            var idx = 0;
+            foreach (var obj in secCode)
+            {
+                if (obj is not NamedCode nc || !nc.Name.Contains(scriptName))
+                {
+                    continue;
+                }
+                foreach (var code in nc.Code)
+                {
+                    if (code is ExecutorCommand cmd)
+                    {
+                        if (cmd.Expression == null)
+                        {
+                            continue;
+                        }
+                        foreach (var exp in cmd.Expression)
+                        {
+                            if(exp.Clauses == null)
+                            {
+                                continue;
+                            }
+                            foreach (var clause in exp.Clauses)
+                            {
+                                if(clause.Data is EditableString str && !string.IsNullOrEmpty(str.Text))
+                                {
+                                    str.Text = strs[idx];
+                                    clause.Data = str;
+                                    idx++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Trace.Assert(idx == strs.Count);
+        }
+
+        public static Tuple<Script, Dictionary<string, string>> GetText(List<object> secCode)
         {
             Script text = [];
+            Dictionary<string, string> nameMap = [];
             List<Dialogue> messages = [];
             string character = "";
             string dialogue = "";
@@ -133,6 +211,7 @@ namespace SecTool
                                 {
                                     character += $" -> {data2.Text}";
                                 }
+                                nameMap.TryAdd(character, character);
                             }
                             else if(id == FLG_TITLE)
                             {
@@ -151,10 +230,10 @@ namespace SecTool
                     messages = [];
                 }
             }
-            return text;
+            return new Tuple<Script, Dictionary<string, string>>(text, nameMap);
         }
         
-        public static void SetText(Script text, List<object> secCode)
+        public static void SetText(Script text, List<object> secCode, Dictionary<string, string>? nameMap = null)
         {
             var TYPE_DIALOGUE = 1 << 0;
             var TYPE_CHARNAME = 1 << 1;
@@ -239,7 +318,26 @@ namespace SecTool
                     {
                         throw new Exception("Generate name need a correct command refrence");
                     }
+
                     var name = dialogue.Character.Split(" -> ");
+                    if(nameMap != null)
+                    {
+                        if (cmd.Expression[0].Clauses[0].Data is int id && cmd.Expression[0].Clauses[2].Op == 0x7A && cmd.Expression[0].Clauses[2].Data is EditableString data)
+                        {
+                            var character = data.Text;
+                            if (cmd.Expression[0].Clauses.Count >= 7)
+                            {
+                                if (cmd.Expression[0].Clauses[5].Data is byte id2 && id2 == 0x03 && cmd.Expression[0].Clauses[6].Data is EditableString data2)
+                                {
+                                    character += $" -> {data2.Text}";
+                                }
+                            }
+                            if (nameMap.TryGetValue(character, out var newChar))
+                            {
+                                name = newChar.Split(" -> ");
+                            }
+                        }
+                    }
                     var charName = name[0];
                     var charOverrideName = name.Length == 2 ? name[1] : name[0];
                     var expr = new List<Expression>
@@ -455,26 +553,37 @@ namespace SecTool
 
         public static Script ImportText(string path)
         {
+            bool haveFormatError = false;
             var ret = new Script();
-            foreach(var file in Directory.EnumerateFiles(path, "*.txt"))
+            foreach(var file in Directory.EnumerateFiles(path, "*.txt", SearchOption.AllDirectories))
             {
                 Console.WriteLine($"Reading {file}...");
                 var messages = new List<Dialogue>();
                 foreach(var line in File.ReadAllLines(file))
                 {
-                    if(line.StartsWith('☆') || line == "")
+                    if(line.StartsWith('★'))
                     {
-                        continue;
+                        var text = line.Split('★');
+                        if(text.Length < 4)
+                        {
+                            haveFormatError = true;
+                            Console.WriteLine($"Invalid format: {line}");
+                            continue;
+                        }
+                        messages.Add(new Dialogue(text[2], text[3]));
                     }
-                    var text = line.Split('★');
-                    messages.Add(new Dialogue(text[2], text[3]));
                 }
                 ret.Add(new Tuple<string, List<Dialogue>>(Path.GetFileNameWithoutExtension(file), messages));
+            }
+
+            if(haveFormatError)
+            {
+                throw new ArgumentException($"Format error detected. See messages above.");
             }
             return ret;
         }
 
-        public static void ExportText(string outputPath, Script text)
+        public static void ExportText(string outputPath, Script text, bool blankLine = false)
         {
             var total = 0;
             foreach (var dialogues in text)
@@ -486,8 +595,7 @@ namespace SecTool
                 foreach (var dialogue in dialogues.Item2)
                 {
                     output.WriteLine($"☆{idx:X8}☆{dialogue.Character}☆{dialogue.Text}");
-                    //output.WriteLine($"★{idx:X8}★{dialogue.Character}★{dialogue.Text}\n");
-                    if(false && dialogue.Text != "")
+                    if(blankLine && dialogue.Text != "")
                     {
                         output.WriteLine($"★{idx:X8}★{dialogue.Character}★{(dialogue.Text[0] == '「' ? "「」" : dialogue.Text[0] == '『' ? "『』" : "")}\n");
                     }
@@ -504,6 +612,33 @@ namespace SecTool
                 output.Close();
             }
             Console.WriteLine($"Total: {total} characters.");
+        }
+
+        public static void ExportStrings(List<string> strs, string path)
+        {
+            using (var sw = new StreamWriter(File.OpenWrite(path)))
+            {
+                var idx = 0;
+                foreach (var s in strs)
+                {
+                    sw.WriteLine($"☆{idx:X8}☆{s}");
+                    sw.WriteLine($"★{idx:X8}★{s}\n");
+                    idx++;
+                }
+            }
+        }
+        public static List<string> ImportStrings(string path)
+        {
+            List<string> result = [];
+            foreach (var line in File.ReadAllLines(path))
+            {
+                if (line.StartsWith('★'))
+                {
+                    var text = line.Split('★');
+                    result.Add(text[2]);
+                }
+            }
+            return result;
         }
     }
 
