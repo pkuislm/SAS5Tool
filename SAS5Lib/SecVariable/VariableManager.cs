@@ -57,7 +57,7 @@ namespace SAS5Lib.SecVariable
             return VariableTypes[typeIndex];
         }
 
-        public int GetIndexByRegex(string pattern)
+        public int GetVariableTypeIndexByNameRegex(string pattern)
         {
             var vt = VariableTypes.FirstOrDefault(x => Regex.IsMatch(x.Name, pattern));
             if(vt == null)

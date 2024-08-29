@@ -106,12 +106,12 @@ namespace SAS5Lib.SecOption
                 var gameInfo = ((SecOptionMap)GetOptionByName("Registry")).Map;
                 var gameName = ((SecOptionString)gameInfo["Application"]).Value.Text;
                 var gameVersion = ((SecOptionString)gameInfo["Category"]).Value.Text;
-                var gameManufacturter = ((SecOptionString)gameInfo["Manufacturer"]).Value.Text;
+                var gameManufacturer = ((SecOptionString)gameInfo["Manufacturer"]).Value.Text;
 
                 Console.WriteLine("--------------Game Info---------------");
                 Console.WriteLine($"Name: {gameName} (Ver {gameVersion})");
                 Console.WriteLine($"AppID: {gameId}");
-                Console.WriteLine($"Manufacturter: {gameManufacturter}\n");
+                Console.WriteLine($"Manufacturer: {gameManufacturer}\n");
                 Console.WriteLine($"SaveDataGUID: {saveDataGuid}");
                 Console.WriteLine($"SaveDataKey: 0x{saveDataKey:X4}");
                 Console.WriteLine($"SaveDataVersion: {saveDataVersion}");
