@@ -35,7 +35,7 @@
         {
             writer.Write(ReturnType);
             var lenPos = writer.BaseStream.Position;
-            writer.Write(Length);
+            writer.Write(SecScenarioProgram.LegacyVersion ? 0 : Length);
 
             if (Clauses.Count > 0)
             {
@@ -46,7 +46,7 @@
             }
             var curPos = writer.BaseStream.Position;
             writer.BaseStream.Position = lenPos;
-            writer.Write(Convert.ToInt16(curPos - lenPos - 2));
+            writer.Write(SecScenarioProgram.LegacyVersion ? Convert.ToInt32(curPos - lenPos - 2) : Convert.ToInt16(curPos - lenPos - 2));
             writer.BaseStream.Position = curPos;
         }
 

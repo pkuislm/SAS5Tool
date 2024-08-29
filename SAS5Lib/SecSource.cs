@@ -12,21 +12,21 @@ namespace SAS5Lib
             public int v4;
             object v5;
 
-            public SecSourceLine(BinaryReader reader) 
+            public SecSourceLine(BinaryReader reader)
             {
                 v1 = reader.ReadInt32();
                 v2 = reader.ReadInt32();
                 v3 = reader.ReadInt32();
                 v4 = reader.ReadInt32();
-                if(v4 == 0)
+                if (v4 == 0)
                 {
                     v5 = Array.Empty<byte>();
                     return;
                 }
-                if((v1 & 1) != 0)
+                if ((v1 & 1) != 0)
                 {
                     var arr = new ushort[v4];
-                    for(int i = 0; i < v4; i++)
+                    for (int i = 0; i < v4; i++)
                     {
                         arr[i] = reader.ReadUInt16();
                     }
@@ -55,9 +55,9 @@ namespace SAS5Lib
                 }
                 if ((v1 & 1) != 0)
                 {
-                    if(v5 is ushort[] arr)
+                    if (v5 is ushort[] arr)
                     {
-                        foreach(var v in arr)
+                        foreach (var v in arr)
                         {
                             bw.Write(v);
                         }
@@ -113,7 +113,7 @@ namespace SAS5Lib
         {
             SourceFiles = [];
 
-            if(input == null)
+            if (input == null)
             {
                 return;
             }
@@ -121,22 +121,30 @@ namespace SAS5Lib
             using var reader = new BinaryReader(new MemoryStream(input));
             var count = reader.ReadInt32();
 
-            for(int i = 0; i < count; i++)
+            for (int i = 0; i < count; i++)
             {
                 SourceFiles.Add(new SecSourceFile(reader));
             }
 
-            Trace.Assert(reader.ReadInt32() == 0x54505A43);//CZPT
-
-            foreach(var source in SourceFiles)
+            if (reader.BaseStream.Position != reader.BaseStream.Length)
             {
-                var lines = reader.ReadInt32();
-                for(var i = 0; i < lines; ++i)
+                Trace.Assert(reader.ReadInt32() == 0x54505A43);//CZPT
+
+                foreach (var source in SourceFiles)
                 {
-                    source.Positions.Add(new SecSourceLine(reader));
+                    var lines = reader.ReadInt32();
+                    for (var i = 0; i < lines; ++i)
+                    {
+                        source.Positions.Add(new SecSourceLine(reader));
+                    }
                 }
+
+                Trace.Assert(reader.BaseStream.Position == reader.BaseStream.Length);
             }
-            Trace.Assert(reader.BaseStream.Position == reader.BaseStream.Length);
+            else
+            {
+                //Old version ?
+            }
         }
 
         public byte[] GetData()
@@ -145,17 +153,21 @@ namespace SAS5Lib
             using var writer = new BinaryWriter(ms);
 
             writer.Write(SourceFiles.Count);
-            for(int i = 0; i < SourceFiles.Count; i++)
+            for (int i = 0; i < SourceFiles.Count; i++)
             {
                 SourceFiles[i].Write(writer);
             }
-            writer.Write(0x54505A43);
-            for (int i = 0; i < SourceFiles.Count; i++)
+
+            if (SourceFiles.Max(o => o.Positions.Count) > 0)
             {
-                writer.Write(SourceFiles[i].Positions.Count);
-                foreach(var line in SourceFiles[i].Positions)
+                writer.Write(0x54505A43);
+                for (int i = 0; i < SourceFiles.Count; i++)
                 {
-                    line.Write(writer);
+                    writer.Write(SourceFiles[i].Positions.Count);
+                    foreach (var line in SourceFiles[i].Positions)
+                    {
+                        line.Write(writer);
+                    }
                 }
             }
 

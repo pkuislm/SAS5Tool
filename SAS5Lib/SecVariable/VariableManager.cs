@@ -54,5 +54,15 @@
         {
             return VariableTypes[typeIndex];
         }
+
+        public int GetIndexByName(string name)
+        {
+            var vt = VariableTypes.FirstOrDefault(x => x.Name.Contains(name));
+            if(vt == null)
+            {
+                return -1;
+            }
+            return VariableTypes.IndexOf(vt);
+        }
     }
 }

@@ -3,7 +3,8 @@
     public class SecScenarioProgram
     {
         readonly Dictionary<string, byte[]> _sections;
-        readonly int _version;
+        public static int Version { get; private set; }
+        public static bool LegacyVersion { get; private set; }
 
         public SecScenarioProgram(string path)
         {
@@ -14,7 +15,8 @@
                 Console.WriteLine("Invalid Sec5File format.");
                 return;
             }
-            _version = reader.ReadInt32();
+            Version = reader.ReadInt32();
+            LegacyVersion = Version < 109000;
 
             static string ReadSectionName(BinaryReader reader)
             {
@@ -44,7 +46,7 @@
             using var writer = new BinaryWriter(File.Open(path, FileMode.Create));
 
             writer.Write(0x35434553);
-            writer.Write(_version);
+            writer.Write(Version);
 
             static byte[] GetSectionName(string name)
             {

@@ -15,7 +15,15 @@ namespace SAS5Lib.SecCode
 
         public override string ToString()
         {
-            return $"ScriptName: {Name}, CodesCount: {Code.Count}";
+            try
+            {
+                var c = (ExecutorCommand)Code.First(o => o is ExecutorCommand);
+                return $"ScriptName: {Name}, StartAddr:({c.Offset.Old:X8}, {c.Offset.New:X8}), CodesCount: {Code.Count}";
+            }
+            catch(InvalidOperationException)
+            {
+                return $"ScriptName: {Name}, CodesCount: {Code.Count}";
+            }
         }
     }
 
@@ -136,7 +144,7 @@ namespace SAS5Lib.SecCode
 
             void UpdateAddress(ExpressionClause clause)
             {
-                var jmpMode = clause.GetClauseJmpMode();
+                var jmpMode = SecCodeProp.GetClauseJmpMode(clause.Op);
                 if (jmpMode == ExpressionClause.JmpMode.Offset || jmpMode == ExpressionClause.JmpMode.Direct)
                 {
                     if (clause.Data is int dest)
@@ -154,6 +162,11 @@ namespace SAS5Lib.SecCode
                         {
                             if (!addresses.TryGetValue(dest, out var newAddr))
                             {
+                                // Fix: Workaround for old version
+                                if (clause.Op == 0x19)
+                                {
+                                    return;
+                                }
                                 throw new Exception("Unknown jmp dest.");
                             }
                             writer.Write(Convert.ToInt32(newAddr));
@@ -233,7 +246,7 @@ namespace SAS5Lib.SecCode
                 case 0x1B:
                     {
                         cmd.ExecutorIndex = _reader.ReadInt16();
-                        if (cmd.HasExpression())
+                        if (SecCodeProp.ExecutorHaveExpression(cmd.ExecutorIndex))
                         {
                             cmd.GetExpression(_reader);
                         }

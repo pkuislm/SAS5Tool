@@ -156,21 +156,42 @@ namespace ArcTool
                 }
                 else
                 {
-                    switch (Flags & 0x3E)
+                    var BPP = (Flags & 0x3E) switch
                     {
-                        case 0x02:
+                        0x02 => 8,
+                        0x1C => 24,
+                        0x3C => 32,
+                        _ => 8
+                    };
+
+                    var NewStride = Width * (BPP / 8);
+                    if (Stride != NewStride)
+                    {
+                        var NewImageData = new byte[Height * NewStride];
+
+                        for (int i = 0; i < Height; i++)
+                        {
+                            Buffer.BlockCopy(ImageData, i * Stride, NewImageData, i * NewStride, NewStride);
+                        }
+
+                        ImageData = NewImageData;
+                    }
+
+                    switch (BPP)
+                    {
+                        case 8:
                         {
                             using var image = Image.LoadPixelData<L8>(ImageData, Width, Height);
                             image.SaveAsPng($"{outputPath}.{OffsetX}_{OffsetY}.{metadataStr}.png");
                             break;
                         }
-                        case 0x1C:
+                        case 24:
                         {
                             using var image = Image.LoadPixelData<Bgr24>(ImageData, Width, Height);
                             image.SaveAsPng($"{outputPath}.{OffsetX}_{OffsetY}.{metadataStr}.png");
                             break;
                         }
-                        case 0x3C:
+                        case 32:
                         {
                             using var image = Image.LoadPixelData<Bgra32>(ImageData, Width, Height);
                             image.SaveAsPng($"{outputPath}.{OffsetX}_{OffsetY}.{metadataStr}.png");
@@ -204,7 +225,12 @@ namespace ArcTool
                 {
                     case ".png":
                     {
-                        var match = Regex.Match(Path.GetFileName(inputFile), @"(.+)\.(.+)_(.+)\.(.+)\.png");
+                        var fn = Path.GetFileName(inputFile);
+                        if(fn.Contains("subImg"))
+                        {
+                            return;
+                        }
+                        var match = Regex.Match(fn, @"(.+)\.(.+)_(.+)\.(.+)\.png");
                         if(!match.Success)
                         {
                             Console.WriteLine($"Invalid png file name: {inputFile}.");
@@ -1039,6 +1065,27 @@ namespace ArcTool
             {
                 Console.WriteLine($"Writing {fileListDic[key]}...");
                 IarImage.Extract(m_reader, m_arcFileOffset[key], m_arcVersion, fileListDic, Path.Combine(outputPath, fileListDic[key]));
+            }
+        }
+
+        public void ExtractSingle(Dictionary<int, string> fileListDic, string file, string outputPath)
+        {
+            try
+            {
+                var k = fileListDic.First(k => k.Value == file);
+
+                if (!Path.Exists(outputPath))
+                {
+                    Directory.CreateDirectory(outputPath);
+                }
+
+                Console.WriteLine($"Writing {file}...");
+                IarImage.Extract(m_reader, m_arcFileOffset[k.Key], m_arcVersion, fileListDic, Path.Combine(outputPath, fileListDic[k.Key]));
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);
             }
         }
 

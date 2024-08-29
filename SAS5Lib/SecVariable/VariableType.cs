@@ -109,7 +109,7 @@
 
         public override string ToString()
         {
-            return $"Name: {Name},  Type: {Type},  Size: {Type.GetSize()}";
+            return $"Name: {Name},  Type: {Type},  ElementSize: {Type.GetSize()}";
         }
     }
 

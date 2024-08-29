@@ -31,6 +31,22 @@
       "FLG_NAME": 79,
       "FLG_TITLE": 100,
       "FLG_SELECT": 112
+    },
+    {
+      "GameTitle": "Koi Iro Sora Moyou",
+      "GameTitleJP": "恋色空模様",
+      "GameID": "koisora",
+      "FLG_NAME": 113,
+      "FLG_TITLE": 36,
+      "FLG_SELECT": 108
+    },
+    {
+      "GameTitle": "Koi Iro Sora Moyou after happiness and extra hearts",
+      "GameTitleJP": "恋色空模様 after happiness and extra hearts",
+      "GameID": "koisora_ex",
+      "FLG_NAME": 88,
+      "FLG_TITLE": 107,
+      "FLG_SELECT": 119
     }
   ]
 }

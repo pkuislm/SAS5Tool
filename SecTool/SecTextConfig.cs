@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace SecTool
 {
-    public struct SecTextFlag
+    public readonly struct SecTextFlag
     {
         public int NameFlag { get; }
         public int TitleFlag { get; }
@@ -17,7 +17,7 @@ namespace SecTool
         }
     }
 
-    public struct SecGameDetail
+    public readonly struct SecGameDetail
     {
         public readonly string GameID { get; }
         public readonly string GameName { get; }
