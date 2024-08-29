@@ -1,4 +1,6 @@
-﻿namespace SAS5Lib
+﻿using System.Text;
+
+namespace SAS5Lib
 {
     public class SecCodePage
     {
@@ -9,6 +11,20 @@
 
         public SecCodePage(BinaryReader reader)
         {
+            FileReadingCodePage = reader.ReadInt32();
+            ExecutorCodePage = reader.ReadInt32();
+            ExpressionCodePage = reader.ReadInt32();
+            ReservedCodePage = reader.ReadInt32();
+        }
+
+        public SecCodePage(byte[]? data)
+        {
+            if (data == null)
+            {
+                return;
+            }
+            using MemoryStream ms = new(data);
+            using BinaryReader reader = new(ms);
             FileReadingCodePage = reader.ReadInt32();
             ExecutorCodePage = reader.ReadInt32();
             ExpressionCodePage = reader.ReadInt32();

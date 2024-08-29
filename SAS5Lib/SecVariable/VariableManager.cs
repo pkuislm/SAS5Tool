@@ -1,4 +1,6 @@
-﻿namespace SAS5Lib.SecVariable
+﻿using System.Text.RegularExpressions;
+
+namespace SAS5Lib.SecVariable
 {
     public class VariableManager : Singleton<VariableManager>
     {
@@ -55,9 +57,9 @@
             return VariableTypes[typeIndex];
         }
 
-        public int GetIndexByName(string name)
+        public int GetIndexByRegex(string pattern)
         {
-            var vt = VariableTypes.FirstOrDefault(x => x.Name.Contains(name));
+            var vt = VariableTypes.FirstOrDefault(x => Regex.IsMatch(x.Name, pattern));
             if(vt == null)
             {
                 return -1;

@@ -25,9 +25,9 @@ namespace SecTool
 
         public static void SetTextFlag()
         {
-            FLG_NAME = VariableManager.Instance.GetIndexByName("msg.sal::name");
-            FLG_TITLE = VariableManager.Instance.GetIndexByName("scene.sal::scene");
-            FLG_SELECT = VariableManager.Instance.GetIndexByName("selection.sal::ks_option");
+            FLG_NAME = VariableManager.Instance.GetIndexByRegex(@"msg.sal::name");
+            FLG_TITLE = VariableManager.Instance.GetIndexByRegex(@"scene.sal::scene");
+            FLG_SELECT = VariableManager.Instance.GetIndexByRegex(@"selection.sal::(.+?_?)option");
         }
 
         static string GetRubyText(ExecutorCommand cmd)

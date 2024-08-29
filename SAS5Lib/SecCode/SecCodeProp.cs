@@ -359,13 +359,25 @@ namespace SAS5Lib.SecCode
             }
         }
 
+        public static object ClauseReadChar(BinaryReader reader) { return reader.ReadSByte(); }
+
         public static object ClauseReadByte(BinaryReader reader) { return reader.ReadByte(); }
+
+        public static object ClauseReadShort(BinaryReader reader) { return reader.ReadInt16(); }
 
         public static object ClauseReadWord(BinaryReader reader) { return reader.ReadUInt16(); }
 
-        public static object ClauseReadDWord(BinaryReader reader) { return reader.ReadUInt32(); }
+        public static object ClauseReadInt(BinaryReader reader) { return reader.ReadInt32(); }
 
-        public static object ClauseReadQWord(BinaryReader reader) { return reader.ReadUInt64(); }
+        public static object ClauseReadDword(BinaryReader reader) { return reader.ReadUInt32(); }
+
+        public static object ClauseReadFloat(BinaryReader reader) { return reader.ReadSingle(); }
+
+        public static object ClauseReadLong(BinaryReader reader) { return reader.ReadInt64(); }
+
+        public static object ClauseReadQword(BinaryReader reader) { return reader.ReadUInt64(); }
+
+        public static object ClauseReadDouble(BinaryReader reader) { return reader.ReadDouble(); }
 
         public static object ClauseReadString(BinaryReader reader)
         {
@@ -401,26 +413,27 @@ namespace SAS5Lib.SecCode
 
         public static Dictionary<byte, ClauseOpProp> ClauseOpProps = new()
         {
-            { 0x0D, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x10, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x0A, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x11, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x23, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x24, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x26, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x28, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x30, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x31, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x32, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x33, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x34, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x35, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x36, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x37, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x38, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x39, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x3A, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x3B, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
+            { 0x0D, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="CondJmpStack"} },
+            { 0x10, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="CallStack"} },
+            { 0x0A, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="Ret"} },
+            { 0x11, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="Ret"} },
+            { 0x21, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableCast"} },//TypeID 4 -> 4
+            { 0x23, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableToRef"} },//TypeID 4 -> 5
+            { 0x24, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="CastVariablePop0"} },
+            { 0x26, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="CastArrayVariablePop0"} },
+            { 0x28, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="PushNullTypeVariable"} },//TypeID = 4
+            { 0x30, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast0"} },//TypeID 5 -> 0 PrimitiveTypeId = 0
+            { 0x31, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast1"} },//TypeID 5 -> 0 PrimitiveTypeId = 1
+            { 0x32, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast2"} },//TypeID 5 -> 0 PrimitiveTypeId = 2
+            { 0x33, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast3"} },//TypeID 5 -> 0 PrimitiveTypeId = 3
+            { 0x34, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast00"} },//TypeID 5 -> 0 PrimitiveTypeId = 0
+            { 0x35, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast10"} },
+            { 0x36, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast2"} },
+            { 0x37, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast3"} },
+            { 0x38, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast4"} },
+            { 0x39, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast5"} },
+            { 0x3A, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast6"} },
+            { 0x3B, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="VariableRefCast7"} },
             { 0x3C, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
             { 0x3D, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
             { 0x3E, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
@@ -432,12 +445,12 @@ namespace SAS5Lib.SecCode
             { 0x43, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
             { 0x44, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
 
-            { 0x50, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
+            { 0x50, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="Cmp_Eq"} },
             { 0x51, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x52, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x54, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x56, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0x57, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
+            { 0x52, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="Pop"} },
+            { 0x54, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="PushBool"} },
+            { 0x56, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="PushLocalFrame"} },
+            { 0x57, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="PopLocalFrame"} },
             { 0x5B, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
             { 0x5C, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
             { 0x5D, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
@@ -557,12 +570,12 @@ namespace SAS5Lib.SecCode
             { 0xE3, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
             { 0xE4, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
             { 0xE5, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
-            { 0xFF, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name=""} },
+            { 0xFF, new(){  JumpMode = JmpMode.None, ReaderFunc = null, Version=[108000, 109000, 110000], Name="END"} },
 
-            { 0x13, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name=""} },
-            { 0x2A, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name=""} },
-            { 0x53, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name=""} },
-            { 0x55, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name=""} },
+            { 0x13, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadChar, Version=[108000, 109000, 110000], Name="PushInt8"} },//TypeID = 0
+            { 0x2A, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name="PushPresetObjRef"} },//TypeID = 5
+            { 0x53, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name="PopRange"} },
+            { 0x55, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name="PushBoolRange"} },
             { 0x58, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name=""} },
             { 0x59, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name=""} },
             { 0x60, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name=""} },
@@ -570,30 +583,34 @@ namespace SAS5Lib.SecCode
             { 0x79, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name=""} },
             { 0x7B, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadByte, Version=[108000, 109000, 110000], Name=""} },
 
-            { 0x14, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadWord, Version=[108000, 109000, 110000], Name=""} },
+            { 0x14, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadShort, Version=[108000, 109000, 110000], Name="PushInt16"} },//TypeID = 0
+            { 0x18, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadWord, Version=[108000, 109000, 110000], Name="PushUInt16"} },//TypeID = 0
 
-            { 0x08, new(){  JumpMode = JmpMode.Direct, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name="Jmp"} },
-            { 0x09, new(){  JumpMode = JmpMode.Offset, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name="JmpOffset"} },
-            { 0x0B, new(){  JumpMode = JmpMode.Direct, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name="CondJmp"} },
-            { 0x0C, new(){  JumpMode = JmpMode.Offset, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name="CondJmpOffset"} },
-            { 0x0E, new(){  JumpMode = JmpMode.Direct, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name="Call"} },
-            { 0x0F, new(){  JumpMode = JmpMode.Offset, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name="CallOffset"} },
-            { 0x12, new(){  JumpMode = JmpMode.Offset, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name="PushOffset"} },
-            { 0x15, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name=""} },
-            { 0x19, new(){  JumpMode = JmpMode.Direct, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name="PushInt"} },// *In old version this command might contains an address
-            { 0x20, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name=""} },
-            { 0x5A, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name=""} },
-            { 0x70, new(){  JumpMode = JmpMode.Direct, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name="PushAddr"} },
-            { 0x78, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadDWord, Version=[108000, 109000, 110000], Name=""} },
+            { 0x08, new(){  JumpMode = JmpMode.Direct, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name="Jmp"} },
+            { 0x09, new(){  JumpMode = JmpMode.Offset, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name="JmpOffset"} },
+            { 0x0B, new(){  JumpMode = JmpMode.Direct, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name="CondJmp"} },
+            { 0x0C, new(){  JumpMode = JmpMode.Offset, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name="CondJmpOffset"} },
+            { 0x0E, new(){  JumpMode = JmpMode.Direct, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name="Call"} },
+            { 0x0F, new(){  JumpMode = JmpMode.Offset, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name="CallOffset"} },
+            { 0x12, new(){  JumpMode = JmpMode.Offset, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name="PushOffset"} },//TypeID = 6
+            { 0x15, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadInt, Version=[108000, 109000, 110000], Name="PushInt"} },
+            { 0x19, new(){  JumpMode = JmpMode.Direct, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name="PushUInt"} },// *In old version this command might contains an address
+            { 0x1B, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadFloat, Version=[108000, 109000, 110000], Name="PushFloat"} },//TypeID = 2
+            { 0x20, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name="PushEmptyVariable"} },//TypeID = 4
+            { 0x5A, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name=""} },
+            { 0x70, new(){  JumpMode = JmpMode.Direct, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name="PushAddr"} },
+            { 0x78, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadDword, Version=[108000, 109000, 110000], Name=""} },
 
-            { 0x1C, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadQWord, Version=[108000, 109000, 110000], Name=""} },
+            { 0x1C, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadDouble, Version=[108000, 109000, 110000], Name="PushDouble"} },//TypeID = 3
+            { 0x16, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadLong, Version=[108000, 109000, 110000], Name="PushLong"} },//TypeID = 1
+            { 0x1A, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadQword, Version=[108000, 109000, 110000], Name="PushULong"} },//TypeID = 1
 
             { 0x7A, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadString, Version=[108000, 109000, 110000], Name=""} },
 
-            { 0x1D, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadVar, Version=[108000, 109000, 110000], Name=""} },
-            { 0x1E, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadVarArray, Version=[108000, 109000, 110000], Name=""} },
+            { 0x1D, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadVar, Version=[108000, 109000, 110000], Name="PushVariable"} },//TypeID = 4
+            { 0x1E, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadVarArray, Version=[108000, 109000, 110000], Name="PushVariableArray"} },//TypeID = 4 (int typeIndex, int elemCount)
 
-            { 0xFE, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadNativeFunCall, Version=[108000, 109000, 110000], Name=""} },
+            { 0xFE, new(){  JumpMode = JmpMode.None, ReaderFunc = ClauseReadNativeFunCall, Version=[108000, 109000, 110000], Name="NativeCall"} },
         };
 
         public static ClauseOpProp GetClauseOpProp(byte op)

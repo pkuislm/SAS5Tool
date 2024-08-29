@@ -60,9 +60,8 @@ namespace SAS5Lib.SecOption
 
         public void UpdateExportFuncAddr(Dictionary<long, long> addresses)
         {
-            if(_secOptionMap != null 
-                && _secOptionMap.Map.TryGetValue("EXPORT_FUNS", out var val) 
-                && val is SecOptionMap mapVal)
+            var opt = GetOptionByName("EXPORT_FUNS");
+            if (opt is SecOptionMap mapVal)
             {
                 foreach(var k in mapVal.Map.Keys)
                 {
@@ -80,6 +79,47 @@ namespace SAS5Lib.SecOption
                         throw new Exception("Unknown export function addr.");
                     }
                 }
+            }
+        }
+
+        public OptionType? GetOptionByName(string name)
+        {
+            if (_secOptionMap != null && _secOptionMap.Map.TryGetValue(name, out var ret))
+            {
+                return ret;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public void PrintGameInfo()
+        {
+            try
+            {
+                var saveDataGuid = ((SecOptionString)GetOptionByName("ContextFileGameGuid")).Value.Text;
+                var saveDataKey = ((SecOptionInteger)GetOptionByName("ContextKey")).Value;
+                var saveDataVersion = ((SecOptionString)GetOptionByName("ContextVersion")).Value.Text;
+                var gameId = ((SecOptionString)GetOptionByName("GlobalAppId")).Value.Text;
+
+                var gameInfo = ((SecOptionMap)GetOptionByName("Registry")).Map;
+                var gameName = ((SecOptionString)gameInfo["Application"]).Value.Text;
+                var gameVersion = ((SecOptionString)gameInfo["Category"]).Value.Text;
+                var gameManufacturter = ((SecOptionString)gameInfo["Manufacturer"]).Value.Text;
+
+                Console.WriteLine("--------------Game Info---------------");
+                Console.WriteLine($"Name: {gameName} (Ver {gameVersion})");
+                Console.WriteLine($"AppID: {gameId}");
+                Console.WriteLine($"Manufacturter: {gameManufacturter}\n");
+                Console.WriteLine($"SaveDataGUID: {saveDataGuid}");
+                Console.WriteLine($"SaveDataKey: 0x{saveDataKey:X4}");
+                Console.WriteLine($"SaveDataVersion: {saveDataVersion}");
+                Console.WriteLine("--------------------------------------\n");
+            }
+            catch
+            {
+
             }
         }
     }

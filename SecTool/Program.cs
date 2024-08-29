@@ -5,6 +5,7 @@ using System.Text;
 using CommandLine;
 using CommandLine.Text;
 using Newtonsoft.Json;
+using static SecTool.Program;
 
 namespace SecTool
 {
@@ -12,14 +13,11 @@ namespace SecTool
     {
         public class BaseOptions
         {
-            [Option('g', "gameid", Required = true, HelpText = "Specify a game id corresponding to the sec5 file, you can use 'list' command to see all supported games.")]
-            public string Id { get; set; }
-
             [Option('s', "sec5", Required = true, HelpText = "Path to sec5 file.")]
             public string InputFile { get; set; }
 
-            [Option('r', "read-encoding", Default = "sjis", HelpText = "Encoding of the strings inside the sec5. You can set the encoding to one of the following values: sjis, gbk, utf8.")]
-            public string ImportEncoding { get; set; }
+            [Option('r', "read-encoding", Default = null, HelpText = "Encoding of the strings inside the sec5. You can set the encoding to one of the following values: sjis, gbk, utf8.")]
+            public string? ImportEncoding { get; set; }
 
             [Option('w', "write-encoding", Default = "utf8", HelpText = "Encoding of the strings inside the sec5. You can set the encoding to one of the following values: sjis, gbk, utf8.")]
             public string ExportEncoding { get; set; }
@@ -36,8 +34,8 @@ namespace SecTool
             {
                 get
                 {
-                    yield return new Example("Export a file using default encoding", new ExportOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", OutputFolder = "A:/B/Games/Texts" });
-                    yield return new Example("Specify a read encoding", new ExportOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", OutputFolder = "A:/B/Games/Texts", ImportEncoding = "sjis" });
+                    yield return new Example("Export a file using default encoding", new ExportOptions { InputFile = "A:/B/Games/main.sec5", OutputFolder = "A:/B/Games/Texts" });
+                    yield return new Example("Specify a read encoding", new ExportOptions { InputFile = "A:/B/Games/main.sec5", OutputFolder = "A:/B/Games/Texts", ImportEncoding = "sjis" });
                 }
             }
         }
@@ -56,8 +54,8 @@ namespace SecTool
             {
                 get
                 {
-                    yield return new Example("Export a file using default encoding", new ExportStrOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", CodeNames = ["msg.sal"], OutputFolder = "A:/B/Games/Strings" });
-                    yield return new Example("Specify a read encoding", new ExportStrOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", CodeNames = ["msg.sal", "scene.sal"], OutputFolder = "A:/B/Games/Strings", ImportEncoding = "sjis" });
+                    yield return new Example("Export a file using default encoding", new ExportStrOptions { InputFile = "A:/B/Games/main.sec5", CodeNames = ["msg.sal"], OutputFolder = "A:/B/Games/Strings" });
+                    yield return new Example("Specify a read encoding", new ExportStrOptions { InputFile = "A:/B/Games/main.sec5", CodeNames = ["msg.sal", "scene.sal"], OutputFolder = "A:/B/Games/Strings", ImportEncoding = "sjis" });
                 }
             }
         }
@@ -79,13 +77,13 @@ namespace SecTool
             {
                 get
                 {
-                    yield return new Example("Import a file using default encoding", new ImportOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "A:/B/Games/main.sec5.new" });
-                    yield return new Example("Specify a read encoding", new ImportOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "A:/B/Games/main.sec5.new", ImportEncoding = "sjis" });
-                    yield return new Example("Specify a write encoding", new ImportOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "A:/B/Games/main.sec5.new", ExportEncoding = "sjis" });
-                    yield return new Example("Specify both read encoding and write encoding", new ImportOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "A:/B/Games/main.sec5.new", ImportEncoding = "sjis", ExportEncoding = "sjis" });
-                    yield return new Example("Don't specify the output path(will use input file's path and name + .new)", new ImportOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts" });
-                    yield return new Example("Specify only output file name(will use input file's path)", new ImportOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "main.sec5.new" });
-                    yield return new Example("Specify only output file path(will use input file's name + .new)", new ImportOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "A:/B/Games/" });
+                    yield return new Example("Import a file using default encoding", new ImportOptions { InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "A:/B/Games/main.sec5.new" });
+                    yield return new Example("Specify a read encoding", new ImportOptions { InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "A:/B/Games/main.sec5.new", ImportEncoding = "sjis" });
+                    yield return new Example("Specify a write encoding", new ImportOptions { InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "A:/B/Games/main.sec5.new", ExportEncoding = "sjis" });
+                    yield return new Example("Specify both read encoding and write encoding", new ImportOptions { InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "A:/B/Games/main.sec5.new", ImportEncoding = "sjis", ExportEncoding = "sjis" });
+                    yield return new Example("Don't specify the output path(will use input file's path and name + .new)", new ImportOptions { InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts" });
+                    yield return new Example("Specify only output file name(will use input file's path)", new ImportOptions { InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "main.sec5.new" });
+                    yield return new Example("Specify only output file path(will use input file's name + .new)", new ImportOptions { InputFile = "A:/B/Games/main.sec5", InputFolder = "A:/B/Games/Texts", OutputPath = "A:/B/Games/" });
                 }
             }
         }
@@ -104,18 +102,15 @@ namespace SecTool
             {
                 get
                 {
-                    yield return new Example("Export a file using default encoding", new ImportStrOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", CodeNames = ["msg.sal", "A:/B/Games/Strings/msg.sal_strings.txt"], OutputPath = "main.sec5.new" });
-                    yield return new Example("Specify a read encoding", new ImportStrOptions { Id = "natsukoi", InputFile = "A:/B/Games/main.sec5", CodeNames = ["msg.sal", "A:/B/Games/Strings/msg.sal_strings.txt", "scene.sal", "A:/B/Games/Strings/scene.sal_strings.txt"], OutputPath = "main.sec5.new", ImportEncoding = "sjis" });
+                    yield return new Example("Export a file using default encoding", new ImportStrOptions { InputFile = "A:/B/Games/main.sec5", CodeNames = ["msg.sal", "A:/B/Games/Strings/msg.sal_strings.txt"], OutputPath = "main.sec5.new" });
+                    yield return new Example("Specify a read encoding", new ImportStrOptions { InputFile = "A:/B/Games/main.sec5", CodeNames = ["msg.sal", "A:/B/Games/Strings/msg.sal_strings.txt", "scene.sal", "A:/B/Games/Strings/scene.sal_strings.txt"], OutputPath = "main.sec5.new", ImportEncoding = "sjis" });
                 }
             }
         }
 
         [Verb("get", HelpText = "Get a raw data section from a .sec5 file.")]
-        public class SectionGetOptions
+        public class SectionGetOptions : BaseOptions
         {
-            [Option('s', "sec5", Required = true, HelpText = "Path to sec5 file.")]
-            public string InputFile { get; set; }
-
             [Option('n', "section-name", Required = true, HelpText = "You can get one of the following sections: 'CODE', 'OPTN', 'CHAR', 'CZIT', 'DTDE', 'RES2', 'RTFC', 'VARI'")]
             public string SectionName { get; set; }
 
@@ -124,11 +119,8 @@ namespace SecTool
         }
 
         [Verb("set", HelpText = "Set a raw data section to a .sec5 file.")]
-        public class SectionSetOptions
+        public class SectionSetOptions : BaseOptions
         {
-            [Option('s', "sec5", Required = true, HelpText = "Path to sec5 file.")]
-            public string InputFile { get; set; }
-
             [Option('n', "section-name", Required = true, HelpText = "You can set one of the following sections: 'CODE', 'OPTN', 'CHAR', 'CZIT', 'DTDE', 'RES2', 'RTFC', 'VARI'")]
             public string SectionName { get; set; }
 
@@ -139,15 +131,18 @@ namespace SecTool
             public string OutputPath { get; set; }
         }
 
-        [Verb("list", HelpText = "List all supported games.")]
-        public class ListOptions { }
+        [Verb("info", HelpText = "View the info of a .sec5 file.")]
+        public class InfoOptions
+        {
+            [Option('s', "sec5", Required = true, HelpText = "Path to sec5 file.")]
+            public string InputFile { get; set; }
+        }
 
         static void Main(string[] args)
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            SecTextConfig.Instance.LoadConfig();
             var parser = new Parser(with => with.HelpWriter = null);
-            var parserResult = parser.ParseArguments<ExportOptions, ExportStrOptions, ImportOptions, ImportStrOptions, SectionGetOptions, SectionSetOptions, ListOptions>(args);
+            var parserResult = parser.ParseArguments<ExportOptions, ExportStrOptions, ImportOptions, ImportStrOptions, SectionGetOptions, SectionSetOptions, InfoOptions>(args);
             parserResult
                 .WithParsed<ExportOptions>(Run)
                 .WithParsed<ExportStrOptions>(Run)
@@ -155,7 +150,7 @@ namespace SecTool
                 .WithParsed<ImportStrOptions>(Run)
                 .WithParsed<SectionGetOptions>(ProcessSection)
                 .WithParsed<SectionSetOptions>(ProcessSection)
-                .WithParsed<ListOptions>(ListGames)
+                .WithParsed<InfoOptions>(PrintInfo)
                 .WithNotParsed(errs => DisplayHelp(parserResult));
         }
 
@@ -183,18 +178,25 @@ namespace SecTool
 
         static void Run(BaseOptions opt)
         {
-            CodepageManager.Instance.SetImportEncoding(opt.ImportEncoding);
-            CodepageManager.Instance.SetExportEncoding(opt.ExportEncoding);
-
-            if (!SecTextConfig.Instance.HaveConfig(opt.Id))
-            {
-                Console.WriteLine($"We don't support '{opt.Id}' now!");
-                return;
-            }
-
-            
-
             SecScenarioProgram prog = new(opt.InputFile);
+
+            if (opt.ImportEncoding != null)
+            {
+                CodepageManager.Instance.SetImportEncoding(opt.ImportEncoding);
+            }
+            else
+            {
+                var c = new SecCodePage(prog.GetSectionData("CHAR"));
+                if (c.FileReadingCodePage != 0)
+                {
+                    CodepageManager.Instance.SetImportEncoding(c.FileReadingCodePage);
+                }
+                else
+                {
+                    CodepageManager.Instance.SetImportEncoding("sjis");
+                }
+            }
+            CodepageManager.Instance.SetExportEncoding(opt.ExportEncoding);
 
             VariableManager.Instance.LoadVariablesList(prog.GetSectionData("DTDE"));
             SecTextTool.SetTextFlag();
@@ -203,6 +205,7 @@ namespace SecTool
             var source = new SecSource(prog.GetSectionData("CZIT"));
             var code = new ScenarioCode(prog.GetSectionData("CODE"), source);
             var option = new OptionManager(prog.GetSectionData("OPTN"));
+            option.PrintGameInfo();
             code.Disasemble();
 
             switch (opt)
@@ -285,28 +288,40 @@ namespace SecTool
             }
         }
 
-        static void ListGames(object opt)
+        static void PrintInfo(object opt)
         {
-            Console.WriteLine(GetHelpText());
-            SecTextConfig.Instance.PrintSupportedGames();
+            if(opt is InfoOptions infoOptions)
+            {
+                SecScenarioProgram prog = new(infoOptions.InputFile);
+
+                var charset = new SecCodePage(prog.GetSectionData("CHAR"));
+                if(charset.FileReadingCodePage != 0)
+                {
+                    CodepageManager.Instance.SetImportEncoding(charset.FileReadingCodePage);
+                }
+                else
+                {
+                    CodepageManager.Instance.SetImportEncoding("sjis");
+                }
+                
+                var option = new OptionManager(prog.GetSectionData("OPTN"));
+                option.PrintGameInfo();
+            }
         }
 
-        static void ProcessSection(object opt)
+        static void ProcessSection(BaseOptions opt)
         {
-            CodepageManager.Instance.SetImportEncoding("sjis");
-            CodepageManager.Instance.SetExportEncoding("sjis");
+            SecScenarioProgram prog = new(opt.InputFile);
 
             switch (opt)
             {
                 case SectionGetOptions sectionGetOptions:
                 {
-                    SecScenarioProgram prog = new(sectionGetOptions.InputFile);
                     File.WriteAllBytes(sectionGetOptions.OutputPath ?? $"{sectionGetOptions.InputFile}.{sectionGetOptions.SectionName}", prog.GetSectionData(sectionGetOptions.SectionName));
                     break;
                 }
                 case SectionSetOptions sectionSetOptions:
                 {
-                    SecScenarioProgram prog = new(sectionSetOptions.InputFile);
                     prog.SetSectionData(sectionSetOptions.SectionName, File.ReadAllBytes(sectionSetOptions.InputSectionFile));
                     prog.Save(GetOutputFilepath(sectionSetOptions.OutputPath, sectionSetOptions.InputFile));
                     break;

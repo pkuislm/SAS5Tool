@@ -61,9 +61,9 @@ namespace SAS5Lib.SecCode
 
             writer.Write(Op);
             DataOffset.New = writer.BaseStream.Position;
-            if (Data != null)
+            switch (Data)
             {
-                if (Data is EditableString str)
+                case EditableString str:
                 {
                     var bs = str.IsEdited ? CodepageManager.Instance.ExportGetBytes(str.Text) : CodepageManager.Instance.ImportGetBytes(str.Text);
                     //Array<char> -> string
@@ -79,13 +79,15 @@ namespace SAS5Lib.SecCode
                         writer.Write(Convert.ToByte(bs.Length));
                     }
                     writer.Write(bs);
+                    break;
                 }
-                else if (Data is NativeFunCall nc)
+                case NativeFunCall nc:
                 {
                     writer.Write(nc.PresetObjIndex);
                     writer.Write(nc.NativeFuncIndex);
+                    break;
                 }
-                else if (Data is Variable v)
+                case Variable v:
                 {
                     writer.Write(v.Index);
                     //Array Type
@@ -95,23 +97,20 @@ namespace SAS5Lib.SecCode
                         writer.Write(Convert.ToUInt32(v.Data.Length / vtSize));
                     }
                     writer.Write(v.Data);
+                    break;
                 }
-                else if (Data is byte b)
-                {
-                    writer.Write(b);
-                }
-                else if (Data is short s)
-                {
-                    writer.Write(s);
-                }
-                else if (Data is int i)
-                {
-                    writer.Write(i);
-                }
-                else if (Data is double d)
-                {
-                    writer.Write(d);
-                }
+                case byte b: writer.Write(b); break;
+                case sbyte sb: writer.Write(sb); break;
+                case short s: writer.Write(s); break;
+                case ushort us: writer.Write(us); break;
+                case int i: writer.Write(i); break;
+                case uint ui: writer.Write(ui); break;
+                case float f: writer.Write(f); break;
+                case double d: writer.Write(d); break;
+                case long l: writer.Write(l); break;
+                case ulong ul: writer.Write(ul); break;
+                default:
+                    break;
             }
         }
 

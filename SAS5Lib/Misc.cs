@@ -17,20 +17,24 @@ namespace SAS5Lib
         public int ExportCodePage { get { return _exportEncoding.CodePage; } }
         public int ImportCodePage { get { return _importEncoding.CodePage; } }
 
-        /*        CodepageManager()
-                {
-                    _exportEncoding = _encodings["utf8"];
-                    _importEncoding = _encodings["sjis"];
-                }*/
-
         public void SetExportEncoding(string encoding)
         {
             _exportEncoding = _encodings[encoding];
         }
 
+        public void SetExportEncoding(int encoding)
+        {
+            _exportEncoding = Encoding.GetEncoding(encoding);
+        }
+
         public void SetImportEncoding(string encoding)
         {
             _importEncoding = _encodings[encoding];
+        }
+
+        public void SetImportEncoding(int encoding)
+        {
+            _importEncoding = Encoding.GetEncoding(encoding);
         }
 
         public string ExportGetString(byte[] bytes)

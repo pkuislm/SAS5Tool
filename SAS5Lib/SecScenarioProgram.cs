@@ -1,4 +1,6 @@
-﻿namespace SAS5Lib
+﻿using System.Text;
+
+namespace SAS5Lib
 {
     public class SecScenarioProgram
     {
@@ -18,14 +20,9 @@
             Version = reader.ReadInt32();
             LegacyVersion = Version < 109000;
 
-            static string ReadSectionName(BinaryReader reader)
-            {
-                return CodepageManager.Instance.ImportGetString(reader.ReadBytes(4));
-            }
-
             while (reader.BaseStream.Position < reader.BaseStream.Length)
             {
-                var sectionName = ReadSectionName(reader);
+                var sectionName = Encoding.ASCII.GetString(reader.ReadBytes(4));
                 var sectionData = reader.ReadBytes(reader.ReadInt32());
                 if (sectionName == "CODE")
                 {
