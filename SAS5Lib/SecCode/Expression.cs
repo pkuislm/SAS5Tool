@@ -1,58 +1,76 @@
 ﻿namespace SAS5Lib.SecCode
 {
+    /*
+     * Expression
+     * Prepare argument(s) for CmdExecutors
+     */
     public class Expression
     {
         public short Length;
-        public byte ReturnType;
-        public List<ExpressionClause> Clauses;
+        public byte ArgID;
+        public List<ExpressionOperation> Operations;
 
-        public Expression(short exprLength, byte exprReturnType, List<ExpressionClause> clauses)
+        public Expression(short exprLength, byte exprArgID, List<ExpressionOperation> operations)
         {
             Length = exprLength;
-            ReturnType = exprReturnType;
-            Clauses = clauses;
+            ArgID = exprArgID;
+            Operations = operations;
         }
         
-        public Expression(short exprLength, byte exprReturnType, long basePos, byte[]? exprData = null)
+        public Expression(short exprLength, byte exprArgID, long basePos, byte[]? exprData = null)
         {
-            Clauses = [];
+            Operations = [];
             Length = exprLength;
-            ReturnType = exprReturnType;
-            //Have clause(s)
-            //Expression ends with 0xFF(VM_END)
+            ArgID = exprArgID;
+            //Have operation(s)
+            //Expression ends with 0xFF(EXPR_END)
             if (exprData != null)
             {
                 using var reader = new BinaryReader(new MemoryStream(exprData));
 
                 while (reader.BaseStream.Position < reader.BaseStream.Length)
                 {
-                    Clauses.Add(new ExpressionClause(reader, basePos));
+                    Operations.Add(new ExpressionOperation(reader, basePos));
                 }
             }
         }
 
         public void Write(BinaryWriter writer, ref Dictionary<long, long> addresses)
         {
-            writer.Write(ReturnType);
+            writer.Write(ArgID);
             var lenPos = writer.BaseStream.Position;
-            writer.Write(SecScenarioProgram.LegacyVersion ? 0 : Length);
-
-            if (Clauses.Count > 0)
+            if(SecScenarioProgram.LegacyVersion)
             {
-                foreach (var clause in Clauses)
+                writer.Write(0);
+            }
+            else
+            {
+                writer.Write(Length);
+            }
+
+            if (Operations.Count > 0)
+            {
+                foreach (var operation in Operations)
                 {
-                    clause.Write(writer, ref addresses);
+                    operation.Write(writer, ref addresses);
                 }
             }
             var curPos = writer.BaseStream.Position;
             writer.BaseStream.Position = lenPos;
-            writer.Write(SecScenarioProgram.LegacyVersion ? Convert.ToInt32(curPos - lenPos - 2) : Convert.ToInt16(curPos - lenPos - 2));
+            if (SecScenarioProgram.LegacyVersion)
+            {
+                writer.Write(Convert.ToInt32(curPos - lenPos - 4));
+            }
+            else
+            {
+                writer.Write(Convert.ToInt16(curPos - lenPos - 2));
+            }
             writer.BaseStream.Position = curPos;
         }
 
         public override string ToString()
         {
-            return $"Expression(ReturnType:{ReturnType:X2}, Clauses:{Clauses.Count})";
+            return $"ArgExpr(ArgID:{ArgID:X2}, OpCount:{Operations.Count})";
         }
     }
 }

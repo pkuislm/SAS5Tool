@@ -1,5 +1,5 @@
-﻿using System.Diagnostics;
-using SAS5Lib.SecVariable;
+﻿using SAS5Lib.SecVariable;
+using static SAS5Lib.SecCode.SecCodeProp;
 
 namespace SAS5Lib.SecCode
 {
@@ -20,8 +20,9 @@ namespace SAS5Lib.SecCode
         }
     }
 
-    public class ExpressionClause
+    public class ExpressionOperation
     {
+        readonly ExprOpProp Prop;
         public CodeOffset DataOffset;
         public CodeOffset Offset;
         public byte Op;
@@ -34,23 +35,24 @@ namespace SAS5Lib.SecCode
             Offset
         }
 
-        public ExpressionClause(byte op, object? data)
+        public ExpressionOperation(byte op, object? data)
         {
             Offset.Old = -1;
             DataOffset.Old = -1;
             Op = op;
             Data = data;
+            Prop = GetOpProp(Op);
         }
 
-        public ExpressionClause(BinaryReader reader, long basePos = 0)
+        public ExpressionOperation(BinaryReader reader, long basePos = 0)
         {
             Offset.Old = reader.BaseStream.Position + basePos;
             Op = reader.ReadByte();
             DataOffset.Old = reader.BaseStream.Position + basePos;
-            var prop = SecCodeProp.GetClauseOpProp(Op);
-            if(prop.ReaderFunc != null)
+            Prop = GetOpProp(Op);
+            if(Prop.ReaderFunc != null)
             {
-                Data = prop.ReaderFunc(reader);
+                Data = Prop.ReaderFunc(reader);
             }
         }
 
@@ -61,6 +63,12 @@ namespace SAS5Lib.SecCode
 
             writer.Write(Op);
             DataOffset.New = writer.BaseStream.Position;
+
+            if(Op == 0xFF)
+            {
+                return;
+            }
+
             switch (Data)
             {
                 case EditableString str:
@@ -87,7 +95,7 @@ namespace SAS5Lib.SecCode
                     writer.Write(nc.NativeFuncIndex);
                     break;
                 }
-                case Variable v:
+                case SecVariable.Object v:
                 {
                     writer.Write(v.Index);
                     //Array Type
@@ -116,7 +124,14 @@ namespace SAS5Lib.SecCode
 
         public override string ToString()
         {
-            return $"ExpressionClause(ExprOP: {Op:X2}, Data: {Data:X4})";
+            string name = Prop.Name;
+
+            if (string.IsNullOrEmpty(name))
+            {
+                name = $"Expr_{Op:X2}";
+            }
+
+            return $"{name}({Prop.FormatterFunc(Data)})";
         }
     }
 }

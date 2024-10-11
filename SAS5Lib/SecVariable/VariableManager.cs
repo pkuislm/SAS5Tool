@@ -4,7 +4,7 @@ namespace SAS5Lib.SecVariable
 {
     public class VariableManager : Singleton<VariableManager>
     {
-        readonly List<VariableType> VariableTypes = [];
+        readonly List<ObjectType> VariableTypes = [];
 
         BasicType ReadType(BinaryReader reader)
         {
@@ -20,11 +20,11 @@ namespace SAS5Lib.SecVariable
                 //case 0x02:
                 case 0x03:
                     {
-                        var typeList = new List<VariableType>();
+                        var typeList = new List<ObjectType>();
                         var count = reader.ReadInt32();
                         for (int i = 0; i < count; i++)
                         {
-                            typeList.Add(new VariableType(Utils.ReadCString(reader), ReadType(reader)));
+                            typeList.Add(new ObjectType(Utils.ReadCString(reader), ReadType(reader)));
                         }
                         return new RecordType(count, typeList);
                     }
@@ -48,11 +48,11 @@ namespace SAS5Lib.SecVariable
             VariableTypes.Capacity = reader.ReadInt32();
             for (int i = 0; i < VariableTypes.Capacity; i++)
             {
-                VariableTypes.Add(new VariableType(Utils.ReadCString(reader), ReadType(reader)));
+                VariableTypes.Add(new ObjectType(Utils.ReadCString(reader), ReadType(reader)));
             }
         }
 
-        public VariableType GetType(int typeIndex)
+        public ObjectType GetType(int typeIndex)
         {
             return VariableTypes[typeIndex];
         }
@@ -65,6 +65,11 @@ namespace SAS5Lib.SecVariable
                 return -1;
             }
             return VariableTypes.IndexOf(vt);
+        }
+
+        public string GetVariableTypeName(int index)
+        {
+            return VariableTypes[index].Name;
         }
     }
 }

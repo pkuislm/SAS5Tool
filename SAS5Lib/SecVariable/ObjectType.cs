@@ -1,5 +1,36 @@
 ﻿namespace SAS5Lib.SecVariable
 {
+    /*
+     * Variable Type (Runtime):
+     * 0 : Byte, Word, Dword
+     * 1 : Qword
+     * 2 : Float
+     * 3 : Double
+     * 4 : Obj
+     * 5 : ObjRef
+     * 6 : InstructionAddr(CodePtr)
+     */
+
+    /*
+     * PrimitiveType(NativeType) ID:
+     * 0 : Byte
+     * 1 : Word
+     * 2 : Dword
+     * 3 : Qword
+     * 4 : Float
+     * 5 : Double
+     * 6 : Obj sizeof(Object*) == 4
+     * 7 : ObjRef sizeof(ObjectRefrence) == 12
+     * 8 : InstructionAddr sizeof(uint32_t*) == 4
+     */
+
+    /*
+     * CompositionType ID:
+     * 0 : PrimitiveType
+     * 1 : ArrayType
+     * 2 : TupleType
+     * 3 : RecordType
+     */
     public abstract class BasicType
     {
         protected byte BasicTypeID;
@@ -22,7 +53,19 @@
 
         public override string ToString()
         {
-            return $"NativeType({PrimitiveTypeID})";
+            return PrimitiveTypeID switch
+            {
+                0 => "Byte",
+                1 => "Word",
+                2 => "Dword",
+                3 => "Qword",
+                4 => "Float",
+                5 => "Double",
+                6 => "Object",
+                7 => "ObjRef",
+                8 => "InstructionAddr",
+                _ => $"NativeType({PrimitiveTypeID})"
+            };
         }
 
         public override int GetSize()
@@ -78,9 +121,9 @@
     public class RecordType : BasicType
     {
         public int MemberCount;
-        public List<VariableType> Members;
+        public List<ObjectType> Members;
 
-        public RecordType(int memberCount, List<VariableType> members) : base(3)
+        public RecordType(int memberCount, List<ObjectType> members) : base(3)
         {
             MemberCount = memberCount;
             Members = members;
@@ -96,12 +139,12 @@
         }
     }
 
-    public class VariableType
+    public class ObjectType
     {
         public string Name;
         public BasicType Type;
 
-        public VariableType(string name, BasicType type)
+        public ObjectType(string name, BasicType type)
         {
             Name = name;
             Type = type;
@@ -113,13 +156,13 @@
         }
     }
 
-    public class Variable
+    public class Object
     {
         public int Index;
-        public VariableType Type;
+        public ObjectType Type;
         public byte[] Data;
 
-        public Variable(int index, VariableType type, byte[] data)
+        public Object(int index, ObjectType type, byte[] data)
         {
             Index = index;
             Type = type;
@@ -128,7 +171,7 @@
 
         public override string ToString()
         {
-            return $"Variable.{Type}";
+            return $"Object{{{Type}}}";
         }
     }
 }

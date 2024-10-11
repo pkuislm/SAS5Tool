@@ -3,7 +3,7 @@
     public class OrphanExpression
     {
         public CodeOffset Offset;
-        public List<ExpressionClause> Clauses;
+        public List<ExpressionOperation> Clauses;
 
         public OrphanExpression(BinaryReader reader)
         {
@@ -15,7 +15,7 @@
             {
                 b = reader.ReadByte();
                 reader.BaseStream.Position--;
-                Clauses.Add(new ExpressionClause(reader));
+                Clauses.Add(new ExpressionOperation(reader));
 
             } while (b != 0x11);//0x11 -> RET
         }

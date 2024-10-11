@@ -199,9 +199,10 @@ namespace SecTool
             CodepageManager.Instance.SetExportEncoding(opt.ExportEncoding);
 
             VariableManager.Instance.LoadVariablesList(prog.GetSectionData("DTDE"));
+            var vari = new PresetVariables(prog.GetSectionData("VARI"));
             SecTextTool.SetTextFlag();
 
-            var charset = new SecCodePage(CodepageManager.Instance.ExportCodePage);
+            var charset = opt.ExportEncoding == "gbk" ? new SecCodePage(0) : new SecCodePage(CodepageManager.Instance.ExportCodePage);
             var source = new SecSource(prog.GetSectionData("CZIT"));
             var code = new ScenarioCode(prog.GetSectionData("CODE"), source);
             var option = new OptionManager(prog.GetSectionData("OPTN"));

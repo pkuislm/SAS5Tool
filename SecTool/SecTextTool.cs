@@ -25,9 +25,9 @@ namespace SecTool
 
         public static void SetTextFlag()
         {
-            FLG_NAME = VariableManager.Instance.GetVariableTypeIndexByNameRegex(@"msg.sal::name");
-            FLG_TITLE = VariableManager.Instance.GetVariableTypeIndexByNameRegex(@"scene.sal::scene");
-            FLG_SELECT = VariableManager.Instance.GetVariableTypeIndexByNameRegex(@"selection.sal::(.+?_?)option");
+            FLG_NAME = VariableManager.Instance.GetVariableTypeIndexByNameRegex(@"msg\.sal::name::");
+            FLG_TITLE = VariableManager.Instance.GetVariableTypeIndexByNameRegex(@"scene\.sal::scene::");
+            FLG_SELECT = VariableManager.Instance.GetVariableTypeIndexByNameRegex(@"selection\.sal::(.+?_?)option::");
         }
 
         static string GetRubyText(ExecutorCommand cmd)
@@ -36,7 +36,7 @@ namespace SecTool
             var ret = "";
             for (int i = 0; i < cmd.Expression.Count; i += 2)
             {
-                if (cmd.Expression[i].Clauses[0].Data is EditableString origText && cmd.Expression[i + 1].Clauses[0].Data is EditableString rubyText)
+                if (cmd.Expression[i].Operations[0].Data is EditableString origText && cmd.Expression[i + 1].Operations[0].Data is EditableString rubyText)
                 {
                     ret += $"{{{origText.Text}:{rubyText.Text}}}";
                 }
@@ -79,13 +79,13 @@ namespace SecTool
                         }
                         foreach (var exp in cmd.Expression)
                         {
-                            if (exp.Clauses == null)
+                            if (exp.Operations == null)
                             {
                                 continue;
                             }
-                            foreach (var clause in exp.Clauses)
+                            foreach (var operation in exp.Operations)
                             {
-                                if (clause.Data is EditableString str && !string.IsNullOrEmpty(str.Text))
+                                if (operation.Data is EditableString str && !string.IsNullOrEmpty(str.Text))
                                 {
                                     result.Add(str.Text);
                                 }
@@ -116,16 +116,16 @@ namespace SecTool
                         }
                         foreach (var exp in cmd.Expression)
                         {
-                            if (exp.Clauses == null)
+                            if (exp.Operations == null)
                             {
                                 continue;
                             }
-                            foreach (var clause in exp.Clauses)
+                            foreach (var operstion in exp.Operations)
                             {
-                                if (clause.Data is EditableString str && !string.IsNullOrEmpty(str.Text))
+                                if (operstion.Data is EditableString str && !string.IsNullOrEmpty(str.Text))
                                 {
                                     str.Text = strs[idx];
-                                    clause.Data = str;
+                                    operstion.Data = str;
                                     idx++;
                                 }
                             }
@@ -195,30 +195,29 @@ namespace SecTool
                         }
                         else if (cmd.ExecutorIndex == 0x12)
                         {
-                            if (cmd.Expression == null || cmd.Expression.Count < 2)
+                            if (cmd.Expression == null || (!SecScenarioProgram.LegacyVersion && cmd.Expression.Count < 2))
                             {
                                 continue;
                             }
-                            var clauses = cmd.Expression[0].Clauses;
-                            if (clauses[0].Op != STR_PUSH_OP)
+                            var operations = cmd.Expression[0].Operations;
+                            if (operations[0].Op != STR_PUSH_OP || (SecScenarioProgram.LegacyVersion && operations.Count < STR_LOAD_INDEX))
                             {
                                 continue;
                             }
                             //This is kind of string related
-                            if (clauses[0].Data is not int id || clauses[STR_LOAD_INDEX].Op != STR_LOAD_OP || clauses[STR_LOAD_INDEX].Data is not EditableString data)
+                            if (operations[0].Data is not uint id || operations[STR_LOAD_INDEX].Op != STR_LOAD_OP || operations[STR_LOAD_INDEX].Data is not EditableString data)
                             {
                                 continue;
                             }
                             if (id == FLG_NAME)
                             {
                                 character = data.Text;
-                                if (clauses.Count < STR_LOAD_INDEX2)
+                                if (operations.Count >= STR_LOAD_INDEX2)
                                 {
-                                    break;
-                                }
-                                if (clauses[STR_LOAD_ID2_INDEX].Data is byte id2 && id2 == 0x03 && clauses[STR_LOAD_INDEX].Data is EditableString data2)
-                                {
-                                    character += $" -> {data2.Text}";
+                                    if (Convert.ToByte(operations[STR_LOAD_ID2_INDEX].Data) == 0x03 && operations[STR_LOAD_INDEX2].Data is EditableString data2)
+                                    {
+                                        character += $" -> {data2.Text}";
+                                    }
                                 }
                                 nameMap.TryAdd(character, character);
                             }
@@ -255,10 +254,12 @@ namespace SecTool
             byte STR_LOAD_POS_OP1 = 0x13;
             byte STR_LOAD_OP = 0x1E;
             byte STR_LOAD_POS_OP2 = 0x13;
+            int STR_LOAD_POS = 4;
             int STR_LOAD_INDEX = 6;
             int STR_LOAD_ID2_INDEX = 14;
             int STR_LOAD_INDEX2 = 16;
-            int NAME_EXPR_CP_POS = 23;
+            int NAME_EXPR_CP_POS1 = 13;
+            int NAME_EXPR_CP_POS2 = 23;
 
             if (!SecScenarioProgram.LegacyVersion)
             {
@@ -266,10 +267,12 @@ namespace SecTool
                 STR_LOAD_POS_OP1 = 0x79;
                 STR_LOAD_OP = 0x7A;
                 STR_LOAD_POS_OP2 = 0x7B;
+                STR_LOAD_POS = 1;
                 STR_LOAD_INDEX = 2;
                 STR_LOAD_ID2_INDEX = 5;
                 STR_LOAD_INDEX2 = 6;
-                NAME_EXPR_CP_POS = 9;
+                NAME_EXPR_CP_POS1 = 5;
+                NAME_EXPR_CP_POS2 = 9;
             }
 
             NamedCode current;
@@ -315,12 +318,12 @@ namespace SecTool
                                 var expr = new List<Expression>
                                     {
                                         new(0, 1, [
-                                            new ExpressionClause(STR_LOAD_OP, new EditableString(line.Substring(g[2].Index, g[2].Length), true)),
-                                            new ExpressionClause(0xFF, null)
+                                            new ExpressionOperation(STR_LOAD_OP, new EditableString(line.Substring(g[2].Index, g[2].Length), true)),
+                                            new ExpressionOperation(0xFF, null)
                                         ]),
                                         new(0, 2, [
-                                            new ExpressionClause(STR_LOAD_OP, new EditableString(line.Substring(g[3].Index, g[3].Length), true)),
-                                            new ExpressionClause(0xFF, null)
+                                            new ExpressionOperation(STR_LOAD_OP, new EditableString(line.Substring(g[3].Index, g[3].Length), true)),
+                                            new ExpressionOperation(0xFF, null)
                                         ])
                                     };
                                 cmd.Expression.AddRange(expr);
@@ -352,14 +355,14 @@ namespace SecTool
                     var name = dialogue.Character.Split(" -> ");
                     if (nameMap != null)
                     {
-                        if (cmd.Expression[0].Clauses[0].Data is int id 
-                            && cmd.Expression[0].Clauses[STR_LOAD_INDEX].Op == STR_LOAD_OP 
-                            && cmd.Expression[0].Clauses[STR_LOAD_INDEX].Data is EditableString data)
+                        if (cmd.Expression[0].Operations[0].Data is uint id 
+                            && cmd.Expression[0].Operations[STR_LOAD_INDEX].Op == STR_LOAD_OP 
+                            && cmd.Expression[0].Operations[STR_LOAD_INDEX].Data is EditableString data)
                         {
                             var character = data.Text;
-                            if (cmd.Expression[0].Clauses.Count >= STR_LOAD_INDEX2)
+                            if (cmd.Expression[0].Operations.Count >= STR_LOAD_INDEX2)
                             {
-                                if (cmd.Expression[0].Clauses[STR_LOAD_ID2_INDEX].Data is byte id2 && id2 == 0x03 && cmd.Expression[0].Clauses[STR_LOAD_INDEX2].Data is EditableString data2)
+                                if (Convert.ToByte(cmd.Expression[0].Operations[STR_LOAD_ID2_INDEX].Data) == 0x03 && cmd.Expression[0].Operations[STR_LOAD_INDEX2].Data is EditableString data2)
                                 {
                                     character += $" -> {data2.Text}";
                                 }
@@ -375,62 +378,62 @@ namespace SecTool
                     var expr = SecScenarioProgram.LegacyVersion ? new List<Expression>
                     {
                         new(0, 1, [
-                            new ExpressionClause(0x20, FLG_NAME),
-                            new ExpressionClause(0x50, null),
-                            new ExpressionClause(0x23, null),
+                            new ExpressionOperation(0x20, FLG_NAME),
+                            new ExpressionOperation(0x50, null),
+                            new ExpressionOperation(0x23, null),
 
-                            new ExpressionClause(0x50, null),
-                            new ExpressionClause(0x13, (byte)0x01),
-                            new ExpressionClause(0x24, null),
-                            new ExpressionClause(0x1E, new EditableString(charName, true)),
+                            new ExpressionOperation(0x50, null),
+                            new ExpressionOperation(0x13, (byte)0x01),
+                            new ExpressionOperation(0x24, null),
+                            new ExpressionOperation(0x1E, new EditableString(charName, true)),
 
-                            new ExpressionClause(0x42, null),
-                            new ExpressionClause(0x50, null),
-                            new ExpressionClause(0x13, (byte)0x00),
-                            new ExpressionClause(0x24, null),
-                            new ExpressionClause(0x13, (byte)0x01),
-                            new ExpressionClause(0x3C, null),
+                            new ExpressionOperation(0x42, null),
+                            new ExpressionOperation(0x50, null),
+                            new ExpressionOperation(0x13, (byte)0x00),
+                            new ExpressionOperation(0x24, null),
+                            new ExpressionOperation(0x13, (byte)0x01),
+                            new ExpressionOperation(0x3C, null),
 
-                            new ExpressionClause(0x50, null),
-                            new ExpressionClause(0x13, (byte)0x03),
-                            new ExpressionClause(0x24, null),
-                            new ExpressionClause(0x1E, new EditableString(charOverrideName, true)),
+                            new ExpressionOperation(0x50, null),
+                            new ExpressionOperation(0x13, (byte)0x03),
+                            new ExpressionOperation(0x24, null),
+                            new ExpressionOperation(0x1E, new EditableString(charOverrideName, true)),
 
-                            new ExpressionClause(0x42, null),
-                            new ExpressionClause(0x50, null),
-                            new ExpressionClause(0x13, (byte)0x02),
-                            new ExpressionClause(0x24, null),
-                            new ExpressionClause(0x13, (byte)0x01),
-                            new ExpressionClause(0x3C, null),
+                            new ExpressionOperation(0x42, null),
+                            new ExpressionOperation(0x50, null),
+                            new ExpressionOperation(0x13, (byte)0x02),
+                            new ExpressionOperation(0x24, null),
+                            new ExpressionOperation(0x13, (byte)0x01),
+                            new ExpressionOperation(0x3C, null),
                         ])
                     }:
                     new List<Expression>
                     {
                         new(0, 1, [
-                            new ExpressionClause(0x78, FLG_NAME),
+                            new ExpressionOperation(0x78, FLG_NAME),
 
-                            new ExpressionClause(0x79, (byte)0x01),
-                            new ExpressionClause(0x7A, new EditableString(charName, true)),
-                            new ExpressionClause(0x42, null),
-                            new ExpressionClause(0x7B, (byte)0x00),
+                            new ExpressionOperation(0x79, (byte)0x01),
+                            new ExpressionOperation(0x7A, new EditableString(charName, true)),
+                            new ExpressionOperation(0x42, null),
+                            new ExpressionOperation(0x7B, (byte)0x00),
 
-                            new ExpressionClause(0x79, (byte)0x03),
-                            new ExpressionClause(0x7A, new EditableString(charOverrideName, true)),
-                            new ExpressionClause(0x42, null),
-                            new ExpressionClause(0x7B, (byte)0x02)
+                            new ExpressionOperation(0x79, (byte)0x03),
+                            new ExpressionOperation(0x7A, new EditableString(charOverrideName, true)),
+                            new ExpressionOperation(0x42, null),
+                            new ExpressionOperation(0x7B, (byte)0x02)
                         ]),
                         cmd.Expression[1]
                     };
 
                     //Copy old clauses
-                    if (cmd.Expression[0].Clauses[STR_LOAD_ID2_INDEX].Op == STR_LOAD_POS_OP1 && cmd.Expression[0].Clauses[STR_LOAD_ID2_INDEX].Data is byte b && b == 0x03)
+                    if (cmd.Expression[0].Operations[STR_LOAD_ID2_INDEX].Op == STR_LOAD_POS_OP1 && Convert.ToByte(cmd.Expression[0].Operations[STR_LOAD_ID2_INDEX].Data) == 0x03)
                     {
                         //origially has overrde name, skip
-                        expr[0].Clauses.AddRange(cmd.Expression[0].Clauses[NAME_EXPR_CP_POS..]);
+                        expr[0].Operations.AddRange(cmd.Expression[0].Operations[NAME_EXPR_CP_POS2..]);
                     }
                     else
                     {
-                        expr[0].Clauses.AddRange(cmd.Expression[0].Clauses[STR_LOAD_ID2_INDEX..]);
+                        expr[0].Operations.AddRange(cmd.Expression[0].Operations[NAME_EXPR_CP_POS1..]);
                     }
 
                     var ret = new ExecutorCommand(0x1B, 0x12, expr, cmd.Offset.Old);
@@ -442,54 +445,54 @@ namespace SecTool
                     {
                         throw new Exception("Generate title need a correct command refrence");
                     }
-                    ExpressionClause c1;
-                    ExpressionClause c2;
+                    ExpressionOperation c1;
+                    ExpressionOperation c2;
                     if ((type & TITLE_SCENE) != 0)
                     {
-                        c1 = new ExpressionClause(STR_LOAD_POS_OP1, (byte)0x01);
-                        c2 = new ExpressionClause(STR_LOAD_POS_OP2, (byte)0x00);
+                        c1 = new ExpressionOperation(STR_LOAD_POS_OP1, (byte)0x01);
+                        c2 = new ExpressionOperation(STR_LOAD_POS_OP2, (byte)0x00);
                     }
                     else
                     {
-                        c1 = new ExpressionClause(STR_LOAD_POS_OP1, (byte)0x03);
-                        c2 = new ExpressionClause(STR_LOAD_POS_OP2, (byte)0x02);
+                        c1 = new ExpressionOperation(STR_LOAD_POS_OP1, (byte)0x03);
+                        c2 = new ExpressionOperation(STR_LOAD_POS_OP2, (byte)0x02);
                     }
                     var expr = SecScenarioProgram.LegacyVersion ? new List<Expression>
                     {
                         new(0, 1, [
-                            new ExpressionClause(0x20, FLG_TITLE),
-                            new ExpressionClause(0x50, null),
-                            new ExpressionClause(0x23, null),
+                            new ExpressionOperation(0x20, FLG_TITLE),
+                            new ExpressionOperation(0x50, null),
+                            new ExpressionOperation(0x23, null),
 
-                            new ExpressionClause(0x50, null),
+                            new ExpressionOperation(0x50, null),
                             c1,
-                            new ExpressionClause(0x24, null),
+                            new ExpressionOperation(0x24, null),
 
-                            new ExpressionClause(0x1E, new EditableString(dialogue.Text, true)),
-                            new ExpressionClause(0x42, null),
+                            new ExpressionOperation(0x1E, new EditableString(dialogue.Text, true)),
+                            new ExpressionOperation(0x42, null),
 
-                            new ExpressionClause(0x50, null),
+                            new ExpressionOperation(0x50, null),
                             c2,
-                            new ExpressionClause(0x24, null),
+                            new ExpressionOperation(0x24, null),
 
-                            new ExpressionClause(0x13, (byte)0x01),
-                            new ExpressionClause(0x3C, null),
-                            new ExpressionClause(0x52, null),
-                            new ExpressionClause(0xFF, null)
+                            new ExpressionOperation(0x13, (byte)0x01),
+                            new ExpressionOperation(0x3C, null),
+                            new ExpressionOperation(0x52, null),
+                            new ExpressionOperation(0xFF, null)
                         ])
                     }: 
                     new List<Expression>
                     {
                         new(0, 1, [
-                            new ExpressionClause(0x78, FLG_TITLE),
+                            new ExpressionOperation(0x78, FLG_TITLE),
 
                             c1,
-                            new ExpressionClause(0x7A, new EditableString(dialogue.Text, true)),
-                            new ExpressionClause(0x42, null),
+                            new ExpressionOperation(0x7A, new EditableString(dialogue.Text, true)),
+                            new ExpressionOperation(0x42, null),
                             c2,
 
-                            new ExpressionClause(0x52, null),
-                            new ExpressionClause(0xFF, null)
+                            new ExpressionOperation(0x52, null),
+                            new ExpressionOperation(0xFF, null)
                         ]),
                         cmd.Expression[1]
                     };
@@ -505,37 +508,37 @@ namespace SecTool
                     var expr = SecScenarioProgram.LegacyVersion ? new List<Expression>
                     {
                         new(0, 1, [
-                            new ExpressionClause(0x20, FLG_SELECT),
-                            new ExpressionClause(0x50, null),
-                            new ExpressionClause(0x23, null),
-                            new ExpressionClause(0x50, null),
-                            new ExpressionClause(0x13, (byte)0x01),
-                            new ExpressionClause(0x24, null),
+                            new ExpressionOperation(0x20, FLG_SELECT),
+                            new ExpressionOperation(0x50, null),
+                            new ExpressionOperation(0x23, null),
+                            new ExpressionOperation(0x50, null),
+                            new ExpressionOperation(0x13, (byte)0x01),
+                            new ExpressionOperation(0x24, null),
 
-                            new ExpressionClause(0x1E, new EditableString(dialogue.Text, true)),
-                            new ExpressionClause(0x42, null),
-                            new ExpressionClause(0x50, null),
-                            new ExpressionClause(0x13, (byte)0x00),
-                            new ExpressionClause(0x24, null),
-                            new ExpressionClause(0x13, (byte)0x01),
+                            new ExpressionOperation(0x1E, new EditableString(dialogue.Text, true)),
+                            new ExpressionOperation(0x42, null),
+                            new ExpressionOperation(0x50, null),
+                            new ExpressionOperation(0x13, (byte)0x00),
+                            new ExpressionOperation(0x24, null),
+                            new ExpressionOperation(0x13, (byte)0x01),
 
-                            new ExpressionClause(0x3C, null),
-                            new ExpressionClause(0x52, null),
-                            new ExpressionClause(0xFF, null)
+                            new ExpressionOperation(0x3C, null),
+                            new ExpressionOperation(0x52, null),
+                            new ExpressionOperation(0xFF, null)
                         ])
                     } : 
                     new List<Expression>
                     {
                         new(0, 1, [
-                            new ExpressionClause(0x78, FLG_SELECT),
+                            new ExpressionOperation(0x78, FLG_SELECT),
 
-                            new ExpressionClause(0x79, (byte)0x01),
-                            new ExpressionClause(0x7A, new EditableString(dialogue.Text, true)),
-                            new ExpressionClause(0x42, null),
-                            new ExpressionClause(0x7B, (byte)0x00),
+                            new ExpressionOperation(0x79, (byte)0x01),
+                            new ExpressionOperation(0x7A, new EditableString(dialogue.Text, true)),
+                            new ExpressionOperation(0x42, null),
+                            new ExpressionOperation(0x7B, (byte)0x00),
 
-                            new ExpressionClause(0x52, null),
-                            new ExpressionClause(0xFF, null)
+                            new ExpressionOperation(0x52, null),
+                            new ExpressionOperation(0xFF, null)
                         ]),
                         cmd.Expression[1]
                     };
@@ -568,17 +571,17 @@ namespace SecTool
                         {
                             continue;
                         }
-                        if (cmd.Expression == null || cmd.Expression.Count < 2)
+                        if (cmd.Expression == null || (!SecScenarioProgram.LegacyVersion && cmd.Expression.Count < 2))
                         {
                             continue;
                         }
-                        var clauses = cmd.Expression[0].Clauses;
-                        if (clauses[0].Op != 0x78)
+                        var operations = cmd.Expression[0].Operations;
+                        if (operations[0].Op != STR_PUSH_OP || (SecScenarioProgram.LegacyVersion && operations.Count < STR_LOAD_INDEX))
                         {
                             continue;
                         }
                         //This is kind of string related
-                        if (clauses[0].Data is not int id || clauses[2].Op != 0x7A || clauses[2].Data is not EditableString data)
+                        if (operations[0].Data is not uint id || operations[STR_LOAD_INDEX].Op != STR_LOAD_OP || operations[STR_LOAD_INDEX].Data is not EditableString data)
                         {
                             continue;
                         }
@@ -588,9 +591,9 @@ namespace SecTool
                         }
                         else if (id == FLG_TITLE)
                         {
-                            if (clauses[1].Op == 0x79 && clauses[1].Data is byte b)
+                            if (operations[STR_LOAD_POS].Op == STR_LOAD_POS_OP1)
                             {
-                                if (b == 0x01)
+                                if (Convert.ToByte(operations[STR_LOAD_POS].Data) == 0x01)
                                 {
                                     yield return new Tuple<int, int, int>(TYPE_TITLE | TITLE_SCENE, i, i + 1);
                                 }

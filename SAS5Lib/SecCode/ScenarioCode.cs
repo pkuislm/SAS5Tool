@@ -142,35 +142,32 @@ namespace SAS5Lib.SecCode
                 WriteCodeObj(cb);
             }
 
-            void UpdateAddress(ExpressionClause clause)
+            void UpdateAddress(ExpressionOperation clause)
             {
-                var jmpMode = SecCodeProp.GetClauseJmpMode(clause.Op);
-                if (jmpMode == ExpressionClause.JmpMode.Offset || jmpMode == ExpressionClause.JmpMode.Direct)
+                var jmpMode = SecCodeProp.GetOpJmpMode(clause.Op);
+                if (jmpMode == ExpressionOperation.JmpMode.Offset || jmpMode == ExpressionOperation.JmpMode.Direct)
                 {
-                    if (clause.Data is int dest)
+                    writer.BaseStream.Position = clause.DataOffset.New;
+                    if (jmpMode == ExpressionOperation.JmpMode.Offset && clause.Data is int dest)
                     {
-                        writer.BaseStream.Position = clause.DataOffset.New;
-                        if (jmpMode == ExpressionClause.JmpMode.Offset)
+                        if (!addresses.TryGetValue(dest + clause.DataOffset.Old + 4, out var newAddr))
                         {
-                            if (!addresses.TryGetValue(dest + clause.DataOffset.Old + 4, out var newAddr))
-                            {
-                                throw new Exception("Unknown jmp dest.");
-                            }
-                            writer.Write(Convert.ToInt32(newAddr - clause.DataOffset.New - 4));
+                            throw new Exception("Unknown jmp dest.");
                         }
-                        else
+                        writer.Write(Convert.ToInt32(newAddr - clause.DataOffset.New - 4));
+                    }
+                    else if(clause.Data is uint udest)
+                    {
+                        if (!addresses.TryGetValue(udest, out var newAddr))
                         {
-                            if (!addresses.TryGetValue(dest, out var newAddr))
+                            // Fix: Workaround for old version
+                            if (clause.Op == 0x19)
                             {
-                                // Fix: Workaround for old version
-                                if (clause.Op == 0x19)
-                                {
-                                    return;
-                                }
-                                throw new Exception("Unknown jmp dest.");
+                                return;
                             }
-                            writer.Write(Convert.ToInt32(newAddr));
+                            throw new Exception("Unknown jmp dest.");
                         }
+                        writer.Write(Convert.ToInt32(newAddr));
                     }
                     else
                     {
@@ -194,7 +191,7 @@ namespace SAS5Lib.SecCode
                     {
                         foreach (var expr in execCmd.Expression)
                         {
-                            foreach (var clause in expr.Clauses)
+                            foreach (var clause in expr.Operations)
                             {
                                 UpdateAddress(clause);
                             }

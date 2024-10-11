@@ -22,11 +22,11 @@
         public void GetExpression(BinaryReader reader)
         {
             Expression ??= [];
-            byte b;
-            while ((b = reader.ReadByte()) != 0xFF)
+            byte argID;
+            while ((argID = reader.ReadByte()) != 0xFF)
             {
                 var exprLen = SecScenarioProgram.LegacyVersion ? reader.ReadInt32() : reader.ReadInt16();
-                var expr = new Expression(Convert.ToInt16(exprLen), b, reader.BaseStream.Position, reader.ReadBytes(exprLen));
+                var expr = new Expression(Convert.ToInt16(exprLen), argID, reader.BaseStream.Position, reader.ReadBytes(exprLen));
                 Expression.Add(expr);
             }
         }

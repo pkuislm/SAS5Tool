@@ -20,6 +20,11 @@ namespace SAS5Lib
             Version = reader.ReadInt32();
             LegacyVersion = Version < 109000;
 
+            if(Version < 108000)
+            {
+                throw new NotSupportedException($"This sec5 (version {Version}) is too old!");
+            }
+
             while (reader.BaseStream.Position < reader.BaseStream.Length)
             {
                 var sectionName = Encoding.ASCII.GetString(reader.ReadBytes(4));
@@ -36,6 +41,7 @@ namespace SAS5Lib
                 }
                 _sections.TryAdd(sectionName, sectionData);
             }
+            PrintSecProgramInfo();
         }
 
         public void Save(string path)
@@ -86,6 +92,14 @@ namespace SAS5Lib
             {
                 _sections[sectionName] = sectionData;
             }
+        }
+
+        public void PrintSecProgramInfo()
+        {
+            Console.WriteLine("--------------Code Info---------------");
+            Console.WriteLine($"Version: {Version}");
+            Console.WriteLine($"Section(s): {string.Join(',', _sections.Keys)}");
+            Console.WriteLine("--------------------------------------\n");
         }
     }
 }
